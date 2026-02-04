@@ -311,7 +311,7 @@ class ReverseVideoPlayer(xbmc.Player):
     def _resolve_ffmpeg_path(self):
         candidates = []
 
-        setting_path = self._get_setting_value("ffmpeg_path", "").strip().strip('"')
+        setting_path = self._get_setting_value("ffmpeg_path", "/storage/downloads/ffmpeg/ffmpeg").strip().strip('"')
         if setting_path:
             which_setting = shutil.which(setting_path)
             if which_setting:
@@ -343,7 +343,7 @@ class ReverseVideoPlayer(xbmc.Player):
             candidates.extend([
                 "/usr/bin/ffmpeg",
                 "/usr/local/bin/ffmpeg",
-                "/storage/downloads/ffmpeg",
+                "/storage/downloads/ffmpeg/ffmpeg",
             ])
 
         for path in candidates:
