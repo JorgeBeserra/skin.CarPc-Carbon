@@ -1,0 +1,124 @@
+<window id="1150" type="dialog">
+    <defaultcontrol>9101</defaultcontrol>
+    <include>dialogeffect</include>
+    <onunload>ClearProperty(CtxPath,Home)</onunload>
+    <coordinates>
+        <!-- Posicionamento manual ou centralizado (abaixo) -->
+        <system>1</system>
+        <posx>0</posx>
+        <posy>0</posy>
+    </coordinates>
+    <controls>
+        <include>BehindDialogFadeOut</include>
+        <!-- Fundo Escurecido -->
+        <control type="image">
+            <posx>0</posx>
+            <posy>0</posy>
+            <width>100%</width>
+            <height>100%</height>
+            <texture>black.png</texture>
+            <colordiffuse>77000000</colordiffuse> <!-- Opacidade -->
+            <visible>true</visible>
+        </control>
+
+        <!-- Grupo principal do Diálogo (o retângulo azul/escuro) -->
+        <control type="group">
+            <centerleft>50%</centerleft>
+            <centertop>50%</centertop>
+            <width>900</width> <!-- Ajuste a largura -->
+            <height>600</height> <!-- Ajuste a altura -->
+
+            <!-- Header -->
+            <control type="image">
+                <posx>0</posx>
+                <posy>0</posy>
+                <width>100%</width>
+                <height>90</height>
+                <texture border="5">dialog_header.png</texture>
+            </control>
+            <control type="label">
+                <posx>15</posx>
+                <posy>0</posy>
+                <width>840</width>
+                <height>90</height>
+                <label>Opções</label>
+                <font>font24_title</font>
+                <align>center</align>
+                <aligny>center</aligny>
+            </control>
+
+            <!-- Plano de Fundo do Dialogo -->
+            <control type="image">
+                <posx>0</posx>
+                <posy>90</posy>
+                <width>100%</width>
+                <height>510</height>
+                <texture>dialog_back.png</texture>
+            </control>
+
+            <!-- Botões principais (2 em cima, 1 embaixo) -->
+            <control type="button" id="9101">
+                <posx>45</posx>
+                <posy>135</posy>
+                <width>383</width>
+                <height>180</height>
+                <label>Reproduzir</label>
+                <font>font25</font>
+                <align>center</align>
+                <aligny>center</aligny>
+                <texturefocus>dialogbutton-focus.png</texturefocus>
+                <texturenofocus>dialogbutton-nofocus.png</texturenofocus>
+                <onright>9102</onright>
+                <onleft>9102</onleft>
+                <ondown>9103</ondown>
+                <onup>9103</onup>
+                <onclick>Close</onclick>
+                <onclick condition="!String.IsEmpty(Window(Home).Property(CtxPath))">PlayMedia($INFO[Window(Home).Property(CtxPath)])</onclick>
+                <onclick>ClearProperty(CtxPath,Home)</onclick>
+            </control>
+            <control type="button" id="9102">
+                <posx>472</posx>
+                <posy>135</posy>
+                <width>383</width>
+                <height>180</height>
+                <label>Adicionar à Fila</label>
+                <font>font25</font>
+                <align>center</align>
+                <aligny>center</aligny>
+                <texturefocus>dialogbutton-focus.png</texturefocus>
+                <texturenofocus>dialogbutton-nofocus.png</texturenofocus>
+                <onleft>9101</onleft>
+                <onright>9101</onright>
+                <ondown>9103</ondown>
+                <onup>9103</onup>
+                <onclick>Close</onclick>
+                <onclick condition="!String.IsEmpty(Window(Home).Property(CtxPath))">QueueMedia($INFO[Window(Home).Property(CtxPath)])</onclick>
+                <onclick>ClearProperty(CtxPath,Home)</onclick>
+            </control>
+            <control type="button" id="9103">
+                <posx>45</posx>
+                <posy>345</posy>
+                <width>810</width>
+                <height>180</height>
+                <label>Opções</label>
+                <font>font25</font>
+                <align>center</align>
+                <aligny>center</aligny>
+                <texturefocus>dialogbutton-focus.png</texturefocus>
+                <texturenofocus>dialogbutton-nofocus.png</texturenofocus>
+                <onup>9101</onup>
+                <ondown>9101</ondown>
+                <onleft>9103</onleft>
+                <onright>9103</onright>
+                <onclick>Close</onclick>
+                <onclick>Action(ContextMenu)</onclick>
+            </control>
+             <!-- Botão de Fechar 'X' -->
+            <control type="group">
+                <posx>820</posx>
+                <posy>15</posy>
+                <include>DialogCloseButtonCommons</include>
+            </control>
+        </control>
+    </controls>
+</window>
