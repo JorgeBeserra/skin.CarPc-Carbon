@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window id="13000">
+    <defaultcontrol always="true">9000</defaultcontrol>
+    <include>Window_OpenClose_Animation_Zoom</include>
+    <onload>SetFocus(9000)</onload>
+    <onunload>ClearProperty(reverse_camera)</onunload>
+    
+    <!-- Animação suave de entrada -->
+    <animation effect="slide" start="0,ScreenHeight" end="0,0" time="800" condition="true">Visible</animation>
+    <animation effect="slide" start="0,0" end="0,ScreenHeight" time="800" condition="Window.Close">Visible</animation>
+    
+    <coordinates>
+        <posx>0</posx>
+        <posy>0</posy>
+    </coordinates>
+    
+    <controls>
+        <!-- Fundo preto para o modo câmera -->
+        <control type="image">
+            <posx>0</posx>
+            <posy>0</posy>
+            <width>ScreenWidth</width>
+            <height>ScreenHeight</height>
+            <texture>black.png</texture>
+            <colordiffuse>FF000000</colordiffuse>
+        </control>
+        
+        <!-- Área principal do vídeo da câmera -->
+        <control type="videowindow" id="100">
+            <posx>50</posx>
+            <posy>80</posy>
+            <width>1200</width>
+            <height>600</height>
+            <texturefocus>blank.png</texturefocus>
+            <texturenofocus>blank.png</texturenofocus>
+            <visible>Player.HasVideo</visible>
+        </control>
+        
+        <!-- Superfície de vídeo alternativo quando não há vídeo -->
+        <control type="image" id="101">
+            <posx>50</posx>
+            <posy>80</posy>
+            <width>1200</width>
+            <height>600</height>
+            <texture>camera_placeholder.png</texture>
+            <visible>!Player.HasVideo</visible>
+            <colordiffuse>FF444444</colordiffuse>
+        </control>
+        
+        <!-- Linhas de guia (traçado) -->
+        <control type="image" id="200">
+            <posx>50</posx>
+            <posy>680</posy>
+            <width="1200</width>
+            <height="100</height>
+            <texture>guide_lines.png</texture>
+            <visible>Player.HasVideo</visible>
+            <colordiffuse>AAFFFFFF</colordiffuse>
+        </control>
+        
+        <!-- Borda decorativa -->
+        <control type="image" id="300">
+            <posx>45</posx>
+            <posy>75</posy>
+            <width="1210</width>
+            <height="610</height>
+            <texture border="5">dialogback.png</texture>
+            <colordiffuse>FFD700</colordiffuse>
+            <visible>Player.HasVideo</visible>
+        </control>
+        
+        <!-- Header com informações -->
+        <control type="group" id="400">
+            <posx>0</posx>
+            <posy>0</posy>
+            <width>ScreenHeight</width>
+            <height>60</height>
+            
+            <!-- Fundo do header -->
+            <control type="image">
+                <posx>0</posx>
+                <posy>0</posy>
+                <width>ScreenHeight</width>
+                <height>60</height>
+                <texture border="5">dialog_header.png</texture>
+                <colordiffuse>FFD700</colordiffuse>
+            </control>
+            
+            <!-- Título -->
+            <control type="label" id="401">
+                <description>Título</description>
+                <posx>20</posx>
+                <posy>5</posy>
+                <width>400</width>
+                <height>50</height>
+                <font>font32_title</font>
+                <textcolor>black</textcolor>
+                <label>CÂMERA DE RÉ</label>
+                <align>left</align>
+                <aligny>center</aligny>
+            </control>
+            
+            <!-- Status da ré -->
+            <control type="label" id="402">
+                <description>Status da ré</description>
+                <posx>450</posx>
+                <posy>5</posy>
+                <width>300</width>
+                <height>50</height>
+                <font>font28</font>
+                <textcolor>black</textcolor>
+                <label>[B]MARCHA RÉ ENGATADA[/B]</label>
+                <align>center</align>
+                <aligny>center</aligny>
+            </control>
+            
+            <!-- Indicadores de distância -->
+            <control type="label" id="403">
+                <description>Indicadores</description>
+                <posx>800</posx>
+                <posy>5</posy>
+                <width>400</width>
+                <height>50</height>
+                <font>font24</font>
+                <textcolor>black</textcolor>
+                <label>SENSOR ATIVO</label>
+                <align>right</align>
+                <aligny>center</aligny>
+            </control>
+        </control>
+        
+        <!-- Painel inferior com informações -->
+        <control type="group" id="500">
+            <posx>0</posx>
+            <posy>ScreenHeight-120</posy>
+            <width>ScreenHeight</width>
+            <height>120</height>
+            
+            <!-- Fundo do painel -->
+            <control type="image">
+                <posx>0</posx>
+                <posy>0</posy>
+                <width>ScreenHeight</width>
+                <height>120</height>
+                <texture border="5">dialog_back.png</texture>
+                <colordiffuse>AA000000</colordiffuse>
+            </control>
+            
+            <!-- Distâncias simuladas -->
+            <control type="group" id="510">
+                <posx="100</posx>
+                <posy="20</posy>
+                <width="1200</width>
+                <height="80</height>
+                
+                <!-- Distância esquerda -->
+                <control type="label" id="511">
+                    <posx>0</posx>
+                    <posy>0</posy>
+                    <width>200</width>
+                    <height="40</height>
+                    <font>font20</font>
+                    <textcolor>white</textcolor>
+                    <label>ESQUERDA: 2.5m</label>
+                    <align>left</align>
+                    <aligny>center</aligny>
+                </control>
+                
+                <!-- Distância centro -->
+                <control type="label" id="512">
+                    <posx>400</posx>
+                    <posy>0</posy>
+                    <width>200</width>
+                    <height>40</height>
+                    <font>font20</font>
+                    <textcolor>white</textcolor>
+                    <label>CENTRO: 1.2m</label>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                </control>
+                
+                <!-- Distância direita -->
+                <control type="label" id="513">
+                    <posx>800</posx>
+                    <posy>0</posy>
+                    <width="200</width>
+                    <height="40</height>
+                    <font>font20</font>
+                    <textcolor>white</textcolor>
+                    <label>DIREITA: 3.1m</label>
+                    <align>right</align>
+                    <aligny>center</aligny>
+                </control>
+                
+                <!-- Aviso -->
+                <control type="label" id="514">
+                    <posx="0</posx>
+                    <posy="50</posy>
+                    <width="1200</width>
+                    <height="30</height>
+                    <font>font18</font>
+                    <textcolor>yellow</textcolor>
+                    <label>[B]ATENÇÃO: Verifique sempre atrás do veículo antes de manobrar[/B]</label>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                </control>
+            </control>
+        </control>
+        
+        <!-- Botão de fechar -->
+        <control type="button" id="9000">
+            <description>Fechar câmera</description>
+            <posx>ScreenHeight-150</posx>
+            <posy>ScreenHeight-60</posy>
+            <width="120</width>
+            <height="40</height>
+            <label>FECHAR</label>
+            <font>font18</font>
+            <textcolor>white</textcolor>
+            <texturefocus colordiffuse="blue">button-focus.png</texturefocus>
+            <texturenofocus colordiffuse="grey">button.png</texturenofocus>
+            <onclick>Dialog.Close(reversecamera)</onclick>
+            <visible>!Player.HasVideo</visible>
+        </control>
+        
+        <!-- Indicador de gravação (opcional) -->
+        <control type="image" id="600">
+            <posx>50</posx>
+            <posy>80</posy>
+            <width="30</width>
+            <height="30</height>
+            <texture>recording.png</texture>
+            <visible>Player.HasVideo</visible>
+            <colordiffuse>FF0000</colordiffuse>
+        </control>
+        
+        <!-- Indicador de gravação (texto) -->
+        <control type="label" id="601">
+            <description>Indicador de gravação</description>
+            <posx="90</posx>
+            <posy>80</posy>
+            <width="200</width>
+            <height="30</height>
+            <font>font16</font>
+            <textcolor>red</textcolor>
+            <label>[B]● GRAVANDO[/B]</label>
+            <visible>Player.HasVideo</visible>
+        </control>
+    </controls>
+</window>

@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window id="12000">
+    <defaultcontrol always="true">1</defaultcontrol>
+    <include>Window_OpenClose_Animation_Zoom</include>
+    <onload>SetFocus(1)</onload>
+    <onunload>ClearProperty(door_door)</onunload>
+    
+    <!-- Animação de entrada suave -->
+    <animation effect="slide" start="0,-300" end="0,0" time="500" condition="true">Visible</animation>
+    <animation effect="slide" start="0,0" end="0,-300" time="500" condition="Window.Close">Visible</animation>
+    
+    <coordinates>
+        <posx>200</posx>
+        <posy>100</posy>
+    </coordinates>
+    
+    <controls>
+        <!-- Fundo semi-transparente -->
+        <control type="image">
+            <posx>0</posx>
+            <posy>0</posy>
+            <width>800</width>
+            <height>200</height>
+            <texture border="10">dialogback.png</texture>
+            <colordiffuse>AA000000</colordiffuse>
+        </control>
+        
+        <!-- Header -->
+        <control type="image">
+            <posx>0</posx>
+            <posy>0</posy>
+            <width>800</width>
+            <height>50</height>
+            <texture border="5">dialog_header.png</texture>
+            <colordiffuse>FFD700</colordiffuse>
+        </control>
+        
+        <!-- Título do Alerta -->
+        <control type="label" id="1">
+            <description>Título do alerta</description>
+            <posx>20</posx>
+            <posy>5</posy>
+            <width>760</width>
+            <height>40</height>
+            <font>font32_title</font>
+            <textcolor>white</textcolor>
+            <label>ALERTA DE PORTA</label>
+            <align>center</align>
+            <aligny>center</aligny>
+        </control>
+        
+        <!-- Ícone de porta -->
+        <control type="image" id="2">
+            <description>Ícone de porta</description>
+            <posx>50</posx>
+            <posy>70</posy>
+            <width>100</width>
+            <height>100</height>
+            <texture>defaultaddonweather.png</texture>
+            <visible>!String.IsEmpty(Window.Property(door_alert_icon))</visible>
+        </control>
+        
+        <!-- Texto da mensagem -->
+        <control type="label" id="3">
+            <description>Mensagem de alerta</description>
+            <posx>170</posx>
+            <posy>80</posy>
+            <width>600</width>
+            <height>80</height>
+            <font>font28</font>
+            <textcolor>white</textcolor>
+            <label>$INFO[Window.Property(door_alert_message)]</label>
+            <align>left</align>
+            <aligny>center</aligny>
+            <wrapmultiline>true</wrapmultiline>
+        </control>
+        
+        <!-- Status da porta -->
+        <control type="label" id="4">
+            <description>Status da porta</description>
+            <posx>50</posx>
+            <posy>120</posy>
+            <width>700</width>
+            <height>40</height>
+            <font>font24</font>
+            <textcolor>FFD700</textcolor>
+            <label>[B]$INFO[Window.Property(door_door)][/B] - $INFO[Window.Property(door_status)]</label>
+            <align>left</align>
+            <aligny>center</aligny>
+        </control>
+        
+        <!-- Botão de fechar -->
+        <control type="button" id="10">
+            <description>Fechar alerta</description>
+            <posx>650</posx>
+            <posy>150</posy>
+            <width>120</width>
+            <height="35</height>
+            <label>Fechar</label>
+            <font>font18</font>
+            <textcolor>white</textcolor>
+            <texturefocus colordiffuse="blue">button-focus.png</texturefocus>
+            <texturenofocus colordiffuse="grey">button.png</texturenofocus>
+            <onclick>Dialog.Close(dooralert)</onclick>
+        </control>
+        
+        <!-- Contador automático para fechar -->
+        <control type="label" id="5">
+            <description>Contador para fechar</description>
+            <posx>400</posx>
+            <posy>150</posy>
+            <width="200</width>
+            <height>35</height>
+            <font>font16</font>
+            <textcolor>white</textcolor>
+            <label>Sumirá em: $INFO[Window.Property(door_timer)]s</label>
+            <align>center</align>
+            <aligny>center</aligny>
+            <visible>!String.IsEmpty(Window.Property(door_timer))</visible>
+        </control>
+    </controls>
+</window>
