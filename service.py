@@ -89,6 +89,34 @@ def get_serial_config():
         'timeout': 0.1
     }
 
+def get_camera_config():
+    """Configuração da câmera de ré"""
+    system = platform.system()
+    
+    # Fontes de vídeo disponíveis
+    camera_sources = {
+        "rtsp": "rtsp://admin:password@192.168.1.100:554/stream",  # Câmera IP
+        "usb": "/dev/video0",  # Câmera USB
+        "file": "special://home/addons/skin.CarPc-Carbon/resources/reverse_camera.mp4",  # Vídeo de fallback
+        "stream": "http://localhost:8080/stream"  # Stream local
+    }
+    
+    # Obtém configuração do addon
+    camera_type = addon.getSetting("camera_type") if addon else "file"
+    camera_url = addon.getSetting("camera_url") if addon else ""
+    
+    # Se não tiver URL configurada, usa a padrão
+    if not camera_url:
+        camera_url = camera_sources.get(camera_type, camera_sources["file"])
+    
+    return {
+        'type': camera_type,
+        'url': camera_url,
+        'width': 1280,
+        'height': 720,
+        'fps': 30
+    }
+
 # FunÃ§Ã£o para mostrar a caixa de diÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡logo
 def mostrar_dialogo_desligamento():
     xbmc.log("Kodi: Gerando Dialogo com contador", xbmc.LOGINFO)
@@ -463,6 +491,10 @@ class ReverseVideoPlayer(xbmc.Player):
         system = platform.system()
         tmp_dir = tempfile.gettempdir()
         self.ffmpeg_error_log = os.path.join(tmp_dir, "ffmpeg_error.log")
+        
+        # Obtém configuração da câmera de ré
+        camera_config = get_camera_config()
+        xbmc.log(f"Configurando stream com: {camera_config}", xbmc.LOGINFO)
 
         if system == "Windows":
             self.stream_mode = "udp"
@@ -477,16 +509,54 @@ class ReverseVideoPlayer(xbmc.Player):
             self.play_url = f"udp://{self.udp_host}:{self.udp_port}"
             self.ffmpeg_output = f"udp://{self.udp_host}:{self.udp_port}?pkt_size=1316"
 
-            device = self._get_setting_value("video_device", "USB Video Device")
-            self.ffmpeg_input = ["-f", "dshow", "-i", f"video={device}"]
+            # Configuração para câmera de ré
+            if camera_config['type'] == "rtsp":
+                self.stream_mode = "rtsp"
+                self.play_url = camera_config['url']
+                self.ffmpeg_input = [
+                    "-re",
+                    "-i", self.play_url,
+                    "-rtsp_transport", "tcp"
+                ]
+                self.ffmpeg_output = f"udp://{self.udp_host}:{self.udp_port}?pkt_size=1316"
+            else:
+                device = self._get_setting_value("video_device", "USB Video Device")
+                self.ffmpeg_input = ["-f", "dshow", "-i", f"video={device}"]
         else:
             self.stream_mode = "fifo"
             self.pipe_path = os.path.join(tmp_dir, "video_pipe")
             self.play_url = "file:///" + self.pipe_path
             self.ffmpeg_output = self.pipe_path
 
-            device = self._get_setting_value("video_device", "/dev/video0")
-            self.ffmpeg_input = ["-f", "v4l2", "-input_format", "mjpeg", "-i", device]
+            # Configuração para câmera de ré
+            if camera_config['type'] == "rtsp":
+                self.stream_mode = "rtsp"
+                self.play_url = camera_config['url']
+                self.ffmpeg_input = [
+                    "-re",
+                    "-i", self.play_url,
+                    "-rtsp_transport", "tcp"
+                ]
+                # Mantém o FIFO para saída
+                self.pipe_path = os.path.join(tmp_dir, "video_pipe")
+                self.ffmpeg_output = self.pipe_path
+            elif camera_config['type'] == "usb":
+                device = camera_config['url']
+                self.ffmpeg_input = [
+                    "-f", "v4l2", 
+                    "-input_format", "mjpeg",
+                    "-video_size", f"{camera_config['width']}x{camera_config['height']}",
+                    "-framerate", str(camera_config['fps']),
+                    "-i", device
+                ]
+            else:  # file ou stream fallback
+                if xbmcvfs.exists(camera_config['url']):
+                    self.ffmpeg_input = ["-re", "-i", camera_config['url']]
+                else:
+                    # Usa o fallback
+                    fallback_url = "special://home/addons/skin.CarPc-Carbon/resources/reverse_camera.mp4"
+                    self.ffmpeg_input = ["-re", "-i", fallback_url]
+                    xbmc.log(f"Arquivo não encontrado: {camera_config['url]}, usando fallback", xbmc.LOGINFO)
 
     def _jsonrpc(self, payload):
         response = xbmc.executeJSONRPC(json.dumps(payload))
@@ -930,8 +1000,185 @@ def enviar_serial(cmd):
     else:
         xbmc.log("Serial niÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o conectada para envio", xbmc.LOGERROR)
 
+# VariÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡veis para controle de alertas de porta
+door_alert_active = False
+door_alert_timer = 0
+door_alert_thread = None
+
+# VariÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡veis para controle da câmera de ré
+reverse_camera_active = False
+reverse_camera_dialog = None
+
+def show_door_alert(door_name, status):
+    """Exibe um alerta visual quando uma porta ÃƒÆ’Ã¢â‚¬Âº aberta ou fechada"""
+    global door_alert_active, door_alert_timer
+    
+    try:
+        # Define a mensagem de alerta
+        door_names = {
+            "driver": "Porta Motorista",
+            "passenger": "Porta Passageiro", 
+            "rear_left": "Porta Traseira Esquerda",
+            "rear_right": "Porta Traseira Direita",
+            "trunk": "Porta-malas"
+        }
+        
+        door_display_name = door_names.get(door_name, door_name.title())
+        message = f"{door_display_name} {status}"
+        
+        # Configura as propriedades do alerta
+        window = xbmcgui.Window(10000)
+        window.setProperty("door_door", door_display_name)
+        window.setProperty("door_status", status)
+        window.setProperty("door_alert_message", message)
+        window.setProperty("door_icon", "icon_door.png")
+        
+        # Exibe o alerta
+        xbmc.executebuiltin("ActivateWindow(dooralert)")
+        xbmc.log(f"Alerta de porta exibido: {message}", xbmc.LOGINFO)
+        
+        # Inicia o contador para fechar automaticamente
+        door_alert_active = True
+        door_alert_timer = 5  # 5 segundos
+        
+        # Inicia thread do contador
+        global alert_timer_thread
+        alert_timer_thread = threading.Thread(target=door_alert_timer_worker, daemon=True)
+        alert_timer_thread.start()
+        
+    except Exception as e:
+        xbmc.log(f"Erro ao exibir alerta de porta: {str(e)}", xbmc.LOGERROR)
+
+def door_alert_timer_worker():
+    """Worker para o contador de tempo do alerta"""
+    global door_alert_active, door_alert_timer
+    
+    while door_alert_active and door_alert_timer > 0:
+        time.sleep(1)
+        door_alert_timer -= 1
+        
+        # Atualiza o contador na tela
+        if door_alert_timer > 0:
+            window = xbmcgui.Window(10000)
+            window.setProperty("door_timer", str(door_alert_timer))
+    
+    # Fecha o alerta automaticamente quando o tempo acabar
+    if door_alert_timer == 0:
+        xbmc.executebuiltin("Dialog.Close(dooralert)")
+        door_alert_active = False
+        xbmc.log("Alerta de porta fechado automaticamente", xbmc.LOGINFO)
+
+def check_door_alerts(current_state, last_state):
+    """Verifica mudanças nas portas e exibe alertas"""
+    global door_alert_active
+    
+    # Lista de portas para monitorar
+    doors = ["driver", "passenger", "rear_left", "rear_right", "trunk"]
+    
+    for door in doors:
+        current_door_status = current_state.get(door, "Fechada")
+        last_door_status = last_state.get(door, "Fechada")
+        
+        # Se a porta foi aberta (mudou de fechada para aberta)
+        if last_door_status == "Fechada" and current_door_status == "Aberta":
+            if not door_alert_active:  # Evita alertas consecutivos
+                show_door_alert(door, "ABERTA!")
+        
+        # Se a porta foi fechada (mudou de aberta para fechada)
+        elif last_door_status == "Aberta" and current_door_status == "Fechada":
+            show_door_alert(door, "Fechada")
+
+class ReverseCameraManager:
+    """Gerenciador de câmera de ré com interface visual"""
+    
+    def __init__(self):
+        self.camera_window = None
+        self.video_player = None
+        self.camera_active = False
+        self.streaming_url = None
+        self.distance_sensors = {
+            "left": 2.5,
+            "center": 1.2,
+            "right": 3.1
+        }
+        
+    def start_reverse_camera(self):
+        """Inicia a câmera de ré"""
+        global reverse_camera_active
+        
+        if not self.camera_active:
+            try:
+                # Abre o diálogo da câmera de ré
+                xbmc.executebuiltin("ActivateWindow(reversecamera)")
+                xbmc.log("Câmera de ré iniciada", xbmc.LOGINFO)
+                
+                # Inicia o player de vídeo se necessário
+                self.video_player = ReverseVideoPlayer()
+                self.video_player.play_reverse_video()
+                
+                # Atualiza o status
+                self.camera_active = True
+                reverse_camera_active = True
+                
+                # Inicia atualização de sensores em background
+                threading.Thread(target=self.update_distance_sensors, daemon=True).start()
+                
+            except Exception as e:
+                xbmc.log(f"Erro ao iniciar câmera de ré: {str(e)}", xbmc.LOGERROR)
+    
+    def stop_reverse_camera(self):
+        """Para a câmera de ré"""
+        global reverse_camera_active
+        
+        if self.camera_active:
+            try:
+                # Fecha o diálogo
+                xbmc.executebuiltin("Dialog.Close(reversecamera)")
+                
+                # Para o player de vídeo
+                if self.video_player:
+                    self.video_player.stop_reverse_video()
+                    self.video_player = None
+                
+                # Atualiza o status
+                self.camera_active = False
+                reverse_camera_active = False
+                
+                xbmc.log("Câmera de ré parada", xbmc.LOGINFO)
+                
+            except Exception as e:
+                xbmc.log(f"Erro ao parar câmera de ré: {str(e)}", xbmc.LOGERROR)
+    
+    def update_distance_sensors(self):
+        """Atualiza as distâncias simuladas dos sensores"""
+        import random
+        
+        while self.camera_active and not monitor.abortRequested():
+            try:
+                # Simula variação nas distâncias
+                self.distance_sensors["left"] = max(0.1, self.distance_sensors["left"] + random.uniform(-0.2, 0.2))
+                self.distance_sensors["center"] = max(0.1, self.distance_sensors["center"] + random.uniform(-0.1, 0.1))
+                self.distance_sensors["right"] = max(0.1, self.distance_sensors["right"] + random.uniform(-0.2, 0.2))
+                
+                # Atualiza as propriedades na interface
+                window = xbmcgui.Window(13000)
+                window.setProperty("distance_left", f"{self.distance_sensors['left']:.1f}m")
+                window.setProperty("distance_center", f"{self.distance_sensors['center']:.1f}m") 
+                window.setProperty("distance_right", f"{self.distance_sensors['right']:.1f}m")
+                
+                xbmc.log(f"Sensores atualizados: {self.distance_sensors}", xbmc.LOGINFO)
+                
+                time.sleep(1.0)  # Atualiza a cada segundo
+                
+            except Exception as e:
+                xbmc.log(f"Erro ao atualizar sensores: {str(e)}", xbmc.LOGERROR)
+                break
+
+# Instância global do gerenciador de câmera de ré
+reverse_camera_manager = ReverseCameraManager()
+
 def ui_worker():
-    """AtualizaÃ§Ã£o otimizada da interface"""
+    """AtualizaÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o otimizada da interface"""
     window = xbmcgui.Window(10000)  # Acessa a Home do Kodi
     last_state = {}
     video_player = ReverseVideoPlayer()
@@ -944,9 +1191,14 @@ def ui_worker():
             # Controle do viÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­deo de marcha riÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©
             if current_state.get("reverse_gear") != last_state.get("reverse_gear"):
                 if current_state["reverse_gear"] == "Engatada":
-                    video_player.play_reverse_video()
+                    # Usa o gerenciador de câmera de ré
+                    reverse_camera_manager.start_reverse_camera()
                 else:
-                    video_player.stop_reverse_video()
+                    # Para a câmera de ré
+                    reverse_camera_manager.stop_reverse_camera()
+
+            # Verifica mudanças nas portas e exibe alertas
+            check_door_alerts(current_state, last_state)
 
             if current_state != last_state:
                 # Atualiza as propriedades no Kodi com o status das portas
