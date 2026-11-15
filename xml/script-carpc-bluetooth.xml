@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Tela de conexoes Bluetooth. Aberta por scripts/bluetooth.py (botao na Home). -->
+<window>
+	<defaultcontrol always="true">9001</defaultcontrol>
+	<include>Window_OpenClose_Animation_Zoom</include>
+	<coordinates>
+		<posx>303</posx>
+		<posy>100</posy>
+	</coordinates>
+	<controls>
+		<include>BehindDialogFadeOut</include>
+		<control type="image">
+			<posx>0</posx>
+			<posy>0</posy>
+			<width>1100</width>
+			<height>70</height>
+			<texture border="5">dialog_header.png</texture>
+		</control>
+		<control type="image">
+			<posx>0</posx>
+			<posy>70</posy>
+			<width>1100</width>
+			<height>690</height>
+			<texture>dialog_back.png</texture>
+		</control>
+		<control type="label" id="1">
+			<description>Titulo</description>
+			<posx>20</posx>
+			<posy>5</posy>
+			<include>WindowTitleCommons</include>
+			<width>300</width>
+			<label>Bluetooth</label>
+		</control>
+		<control type="label" id="2">
+			<description>Estado do adaptador</description>
+			<posx>330</posx>
+			<posy>5</posy>
+			<width>680</width>
+			<height>60</height>
+			<align>right</align>
+			<aligny>center</aligny>
+			<font>font20_title</font>
+			<textcolor>grey</textcolor>
+			<label></label>
+		</control>
+		<control type="group">
+			<posx>1030</posx>
+			<posy>5</posy>
+			<include>DialogCloseButtonCommons</include>
+		</control>
+
+		<!-- Lista de dispositivos -->
+		<control type="image">
+			<posx>20</posx>
+			<posy>90</posy>
+			<width>770</width>
+			<height>560</height>
+			<texture colordiffuse="40000000">panel.png</texture>
+		</control>
+		<control type="label" id="4">
+			<description>Mensagem com a lista vazia</description>
+			<posx>40</posx>
+			<posy>90</posy>
+			<width>730</width>
+			<height>560</height>
+			<align>center</align>
+			<aligny>center</aligny>
+			<font>font20_title</font>
+			<textcolor>grey</textcolor>
+			<wrapmultiline>true</wrapmultiline>
+			<label></label>
+			<visible>Integer.IsEqual(Container(50).NumItems,0)</visible>
+		</control>
+		<control type="list" id="50">
+			<posx>20</posx>
+			<posy>90</posy>
+			<width>740</width>
+			<height>560</height>
+			<onup>50</onup>
+			<ondown>50</ondown>
+			<onleft>9001</onleft>
+			<onright>9001</onright>
+			<pagecontrol>60</pagecontrol>
+			<scrolltime>200</scrolltime>
+			<itemlayout height="80" width="740">
+				<control type="label">
+					<posx>20</posx>
+					<posy>0</posy>
+					<width>470</width>
+					<height>80</height>
+					<font>font24_title</font>
+					<align>left</align>
+					<aligny>center</aligny>
+					<label>$INFO[ListItem.Label]</label>
+				</control>
+				<control type="label">
+					<posx>720</posx>
+					<posy>0</posy>
+					<width>220</width>
+					<height>80</height>
+					<font>font20_title</font>
+					<textcolor>grey</textcolor>
+					<align>right</align>
+					<aligny>center</aligny>
+					<label>$INFO[ListItem.Label2]</label>
+				</control>
+			</itemlayout>
+			<focusedlayout height="80" width="740">
+				<control type="image">
+					<posx>0</posx>
+					<posy>0</posy>
+					<width>740</width>
+					<height>80</height>
+					<texture>list_focus.png</texture>
+				</control>
+				<control type="label">
+					<posx>20</posx>
+					<posy>0</posy>
+					<width>470</width>
+					<height>80</height>
+					<font>font24_title</font>
+					<align>left</align>
+					<aligny>center</aligny>
+					<label>$INFO[ListItem.Label]</label>
+				</control>
+				<control type="label">
+					<posx>720</posx>
+					<posy>0</posy>
+					<width>220</width>
+					<height>80</height>
+					<font>font20_title</font>
+					<align>right</align>
+					<aligny>center</aligny>
+					<label>$INFO[ListItem.Label2]</label>
+				</control>
+			</focusedlayout>
+		</control>
+		<control type="scrollbar" id="60">
+			<posx>764</posx>
+			<posy>100</posy>
+			<width>26</width>
+			<height>540</height>
+			<texturesliderbackground colordiffuse="30FFFFFF">white.png</texturesliderbackground>
+			<texturesliderbar colordiffuse="grey">white.png</texturesliderbar>
+			<texturesliderbarfocus colordiffuse="blue">white.png</texturesliderbarfocus>
+			<textureslidernib>blank.png</textureslidernib>
+			<textureslidernibfocus>blank.png</textureslidernibfocus>
+			<onleft>50</onleft>
+			<onright>9001</onright>
+			<showonepage>false</showonepage>
+			<orientation>vertical</orientation>
+		</control>
+
+		<!-- Botoes -->
+		<control type="grouplist" id="9000">
+			<posx>810</posx>
+			<posy>90</posy>
+			<width>270</width>
+			<height>560</height>
+			<itemgap>14</itemgap>
+			<orientation>vertical</orientation>
+			<onleft>50</onleft>
+			<onright>50</onright>
+			<control type="button" id="9001">
+				<description>Procurar dispositivos</description>
+				<width>270</width>
+				<height>100</height>
+				<label>Procurar</label>
+				<font>font24_title</font>
+				<textcolor>FFFFFFFF</textcolor>
+				<focusedcolor>FF00A8FF</focusedcolor>
+				<disabledcolor>60FFFFFF</disabledcolor>
+				<align>center</align>
+				<aligny>center</aligny>
+				<texturefocus>dialogbutton-focus.png</texturefocus>
+				<texturenofocus>dialogbutton-nofocus.png</texturenofocus>
+			</control>
+			<control type="button" id="9002">
+				<description>Deixar o carro visivel para o celular</description>
+				<width>270</width>
+				<height>100</height>
+				<label>Ficar visível</label>
+				<font>font24_title</font>
+				<textcolor>FFFFFFFF</textcolor>
+				<focusedcolor>FF00A8FF</focusedcolor>
+				<disabledcolor>60FFFFFF</disabledcolor>
+				<align>center</align>
+				<aligny>center</aligny>
+				<texturefocus>dialogbutton-focus.png</texturefocus>
+				<texturenofocus>dialogbutton-nofocus.png</texturenofocus>
+			</control>
+			<control type="button" id="9003">
+				<description>Liga/desliga o adaptador</description>
+				<width>270</width>
+				<height>100</height>
+				<label>Ligar Bluetooth</label>
+				<font>font24_title</font>
+				<textcolor>FFFFFFFF</textcolor>
+				<focusedcolor>FF00A8FF</focusedcolor>
+				<disabledcolor>60FFFFFF</disabledcolor>
+				<align>center</align>
+				<aligny>center</aligny>
+				<texturefocus>dialogbutton-focus.png</texturefocus>
+				<texturenofocus>dialogbutton-nofocus.png</texturenofocus>
+			</control>
+			<control type="button" id="9004">
+				<description>Abre as configuracoes do LibreELEC</description>
+				<width>270</width>
+				<height>100</height>
+				<label>LibreELEC</label>
+				<font>font24_title</font>
+				<textcolor>FFFFFFFF</textcolor>
+				<focusedcolor>FF00A8FF</focusedcolor>
+				<align>center</align>
+				<aligny>center</aligny>
+				<texturefocus>dialogbutton-focus.png</texturefocus>
+				<texturenofocus>dialogbutton-nofocus.png</texturenofocus>
+			</control>
+			<control type="button" id="9005">
+				<description>Fechar</description>
+				<width>270</width>
+				<height>100</height>
+				<label>Fechar</label>
+				<font>font24_title</font>
+				<textcolor>FFFFFFFF</textcolor>
+				<focusedcolor>FF00A8FF</focusedcolor>
+				<align>center</align>
+				<aligny>center</aligny>
+				<texturefocus>dialogbutton-focus.png</texturefocus>
+				<texturenofocus>dialogbutton-nofocus.png</texturenofocus>
+			</control>
+		</control>
+
+		<control type="label" id="3">
+			<description>Linha de status</description>
+			<posx>20</posx>
+			<posy>670</posy>
+			<width>1060</width>
+			<height>70</height>
+			<align>left</align>
+			<aligny>center</aligny>
+			<font>font20_title</font>
+			<textcolor>white</textcolor>
+			<label></label>
+		</control>
+	</controls>
+</window>

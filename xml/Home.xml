@@ -173,6 +173,20 @@
 		
 		<!--##################################################################################-->
 
+		<control type="button" id="133">
+			<description>Conexoes Bluetooth (LibreELEC)</description>
+			<posx>1250</posx>
+			<posy>8</posy>
+			<width>150</width>
+			<height>150</height>
+			<label>Bluetooth</label>
+			<font>-</font>
+			<texturefocus colordiffuse="blue">icon_bluetooth.png</texturefocus>
+			<texturenofocus colordiffuse="icons">icon_bluetooth.png</texturenofocus>
+			<onright>132</onright>
+			<onclick>RunScript(special://skin/scripts/bluetooth.py)</onclick>
+		</control>
+
 		<control type="togglebutton" id="132">
 			<posx>1400</posx>
 			<posy>8</posy>
