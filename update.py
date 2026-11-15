@@ -9,8 +9,8 @@ import shutil
 import xbmcvfs  # Importar a biblioteca correta
 
 # Configuração do repositório
-GITHUB_API_URL = "https://api.github.com/repos/JorgeBeserra/CarPc-Carbon-K19/releases/latest"
-GITHUB_DOWNLOAD_URL = "https://github.com/JorgeBeserra/CarPc-Carbon-K19/releases/latest/download/update.zip"
+GITHUB_API_URL = "https://api.github.com/repos/JorgeBeserra/skin.CarPc-Carbon/releases/latest"
+GITHUB_DOWNLOAD_URL = "https://github.com/JorgeBeserra/skin.CarPc-Carbon/releases/latest/download/update.zip"
 ADDON_PATH = xbmcvfs.translatePath(xbmcaddon.Addon().getAddonInfo('path'))
 CURRENT_VERSION = xbmcaddon.Addon().getAddonInfo('version')
 
