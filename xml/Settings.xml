@@ -44,6 +44,12 @@
 					<icon>icon_button_back.png</icon>
 				</item>
 				<item>
+					<label>LibreELEC</label>
+					<onclick>RunScript(special://skin/scripts/libreelec.py)</onclick>
+					<icon>icon_button_settings.png</icon>
+					<visible>System.AddonIsEnabled(service.libreelec.settings)</visible>
+				</item>
+				<item>
 					<label>1036</label>
 					<onclick>ActivateWindow(FavouritesBrowser)</onclick>
 					<icon>icon_button_favourites.png</icon>

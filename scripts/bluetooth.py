@@ -22,9 +22,14 @@ if LIB_PATH not in sys.path:
 
 import carpc_bluetooth as bt  # noqa: E402
 
+SCRIPTS_PATH = os.path.join(SKIN_PATH, "scripts")
+if SCRIPTS_PATH not in sys.path:
+    sys.path.insert(0, SCRIPTS_PATH)
+
+import libreelec  # noqa: E402
+
 WINDOW_XML = "script-carpc-bluetooth.xml"
 RUNNING_PROPERTY = "carpc_bluetooth_open"
-LIBREELEC_SETTINGS = "service.libreelec.settings"
 
 CTRL_ADAPTER = 2
 CTRL_STATUS = 3
@@ -64,6 +69,7 @@ class BluetoothWindow(xbmcgui.WindowXMLDialog):
         self.devices = []
         self.adapter = None
         self.closing = False
+        self.pending_tab = None
         self.ready = False
         self.busy = False
         self.busy_lock = threading.Lock()
@@ -306,13 +312,16 @@ class BluetoothWindow(xbmcgui.WindowXMLDialog):
         self.run_task(status, task, device)
 
     def open_libreelec_settings(self):
-        if xbmc.getCondVisibility("System.HasAddon(%s)" % (LIBREELEC_SETTINGS,)):
-            self.shutdown()
-            xbmc.executebuiltin("RunAddon(%s)" % (LIBREELEC_SETTINGS,))
-        else:
+        """Abre a tela oficial do LibreELEC: na aba Bluetooth, ou em Servicos
+        quando o Bluetooth ainda precisa ser ativado."""
+        if not libreelec.is_installed():
             xbmcgui.Dialog().notification(
                 "Bluetooth", "Configurações do LibreELEC não encontradas",
                 xbmcgui.NOTIFICATION_WARNING, 4000)
+            return
+        # main() abre a tela do LibreELEC depois que esta fechar
+        self.pending_tab = "bluetooth" if self.adapter is not None else "services"
+        self.shutdown()
 
 
 def main():
@@ -320,13 +329,17 @@ def main():
     if home.getProperty(RUNNING_PROPERTY):
         return  # ja esta aberta
     home.setProperty(RUNNING_PROPERTY, "true")
+    pending_tab = None
     try:
         window = BluetoothWindow(WINDOW_XML, SKIN_PATH, "Default", "720p")
         window.doModal()
         window.closing = True
+        pending_tab = window.pending_tab
         del window
     finally:
         home.clearProperty(RUNNING_PROPERTY)
+    if pending_tab:
+        libreelec.open_settings(pending_tab)
 
 
 if __name__ == "__main__":
