@@ -6,6 +6,7 @@ import socket
 import xbmc
 import xbmcaddon
 import xbmcgui
+import xbmcvfs
 import subprocess
 import time
 import threading
@@ -30,7 +31,7 @@ except Exception:
     except Exception:
         addon = None
 
-# Adiciona o diretÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³rio do addon e a pasta lib ao sys.path
+# Adiciona o diretório do addon e a pasta lib ao sys.path
 addon_path = addon.getAddonInfo('path') if addon else ''
 if not addon_path:
     addon_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,18 +46,18 @@ try:
 except ImportError:
     xbmc.log("Falha ao importar PySerial", xbmc.LOGERROR)
     sys.exit()
-# ConfiguraÃ§Ã£o do Addon
+# Configuração do Addon
 addon = xbmcaddon.Addon()
 monitor = Monitor()
 
-# ConfiguraÃ§Ã£o global com lock de thread
+# Configuração global com lock de thread
 door_status = {
     "driver": "Fechada",
     "passenger": "Fechada",
     "rear_left": "Fechada",
     "rear_right": "Fechada",
     "trunk": "Fechado",
-    "reverse_gear": "NiÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o Engatada"
+    "reverse_gear": "Não Engatada"
 }
 status_lock = threading.Lock()
 
@@ -102,7 +103,7 @@ def get_camera_config():
     }
     
     # Obtém configuração do addon
-    camera_type = addon.getSetting("camera_type") if addon else "file"
+    camera_type = (addon.getSetting("camera_type") if addon else "") or "usb"
     camera_url = addon.getSetting("camera_url") if addon else ""
     
     # Se não tiver URL configurada, usa a padrão
@@ -117,26 +118,26 @@ def get_camera_config():
         'fps': 30
     }
 
-# FunÃ§Ã£o para mostrar a caixa de diÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡logo
+# Função para mostrar a caixa de diálogo
 def mostrar_dialogo_desligamento():
     xbmc.log("Kodi: Gerando Dialogo com contador", xbmc.LOGINFO)
-    # CriaÃ§Ã£o da caixa de diÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡logo
+    # Criação da caixa de diálogo
     pDialog = xbmcgui.DialogProgress()
-    mensagem_base = "O desligamento est prÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ximo. Deseja cancelar ou re-agendar?"
+    mensagem_base = "O desligamento est próximo. Deseja cancelar ou re-agendar?"
     botoes = ["Cancelar", "Re-agendar"]
     tempo_total = 30  # Tempo em segundos para o contador
     tempo_restante = tempo_total
 
-    # VariÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡vel para controlar a escolha do usuÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡rio
+    # Variável para controlar a escolha do usuário
     escolha = None
     dialog_closed = False
 
-    pDialog.create("Desligamento PrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ximo", f"{mensagem_base}\nDesligando em {tempo_restante} segundos...")
+    pDialog.create("Desligamento Próximo", f"{mensagem_base}\nDesligando em {tempo_restante} segundos...")
     for i in range(tempo_total, -1, -1):
         tempo_restante = i
         if monitor.abortRequested() or pDialog.iscanceled():
             pDialog.close()
-            xbmc.log("DiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡logo cancelado pelo usuÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡rio ou Kodi", xbmc.LOGINFO)
+            xbmc.log("Diálogo cancelado pelo usuário ou Kodi", xbmc.LOGINFO)
             return
         percent = int((i / tempo_total) * 100)
         pDialog.update(percent, f"{mensagem_base}\nDesligando em {i} segundos...")
@@ -144,12 +145,12 @@ def mostrar_dialogo_desligamento():
         
     pDialog.close()
 
-    # ApÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³s o contador, verifica se o tempo esgotou
+    # Após o contador, verifica se o tempo esgotou
     if tempo_restante == 0:
         xbmc.log("Tempo esgotado, encerrando Kodi", xbmc.LOGINFO)
         xbmc.executebuiltin("Quit")
     else:
-        # Mostra o diÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡logo de escolha
+        # Mostra o diálogo de escolha
         xbmc.log("Tempo nao acabou", xbmc.LOGINFO)
 
 
@@ -162,26 +163,26 @@ def parse_can_message(raw_data):
         
         # Bugs
         #if raw_data == "ShutdownForInactivity":
-        #    xbmc.log("Kodi: Desligando o sistema apÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³s inatividade", xbmc.LOGINFO)
+        #    xbmc.log("Kodi: Desligando o sistema após inatividade", xbmc.LOGINFO)
         #    mostrar_dialogo_desligamento()
 
-        # Verifica se iÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© uma mensagem de ADC
+        # Verifica se é uma mensagem de ADC
         if "ADC Click:" in raw_data:
             adc_value = int(raw_data.split("ADC Click: ")[1].strip())
             with status_lock:
-                # Mapeamento dos valores do ADC para aiÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§iÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes
-                if 3300 <= adc_value <= 3400:  # MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsica Anterior 
-                    door_status["volume_action"] = "MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsica Anterior"
+                # Mapeamento dos valores do ADC para ações
+                if 3300 <= adc_value <= 3400:  # Música Anterior 
+                    door_status["volume_action"] = "Música Anterior"
                     xbmc.executebuiltin("PlayerControl(Previous)")
-                    xbmc.log(f"ADC {adc_value}: MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsica anterior", xbmc.LOGINFO)
-                elif 3600 <= adc_value <= 3700:  # PrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³xima MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsica
-                    door_status["volume_action"] = "PrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³xima MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsica"
+                    xbmc.log(f"ADC {adc_value}: Música anterior", xbmc.LOGINFO)
+                elif 3600 <= adc_value <= 3700:  # Próxima Música
+                    door_status["volume_action"] = "Próxima Música"
                     xbmc.executebuiltin("PlayerControl(Next)")
-                    xbmc.log(f"ADC {adc_value}: PrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³xima mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsica", xbmc.LOGINFO)
+                    xbmc.log(f"ADC {adc_value}: Próxima música", xbmc.LOGINFO)
                 elif 4090 <= adc_value <= 4095:  # Mute (inclui margem para estabilidade)
                     door_status["volume_action"] = "Pause"
                     xbmc.executebuiltin("PlayerControl(Play)")
-                    xbmc.log(f"ADC {adc_value}:  MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsica Pausa (Pausa)", xbmc.LOGINFO)
+                    xbmc.log(f"ADC {adc_value}:  Música Pausa (Pausa)", xbmc.LOGINFO)
                 elif 3880 <= adc_value <= 3930:  # Exemplo: Volume -
                     door_status["volume_action"] = "Volume +"
                     xbmc.log(f"ADC {adc_value}: Volume aumentar", xbmc.LOGINFO)
@@ -190,29 +191,29 @@ def parse_can_message(raw_data):
                 elif 4040 <= adc_value <= 4080:  # Exemplo: Volume +
                     door_status["volume_action"] = "Volume -"
                     adjust_volume("down")
-                    xbmc.log(f"ADC {adc_value}: Volume diminuiÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­do", xbmc.LOGINFO)
+                    xbmc.log(f"ADC {adc_value}: Volume diminuído", xbmc.LOGINFO)
                 elif 2300 <= adc_value <= 2450:  # Estado neutro
                     door_status["volume_action"] = "Neutro"
 
-            return  # Sai apÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³s processar ADC
+            return  # Sai após processar ADC
 
         # Verifica se existe uma mensagem de ADC
         if "ADC Hold:" in raw_data:
             adc_value = int(raw_data.split("ADC Hold: ")[1].strip())
             with status_lock:
-                # Mapeamento dos valores do ADC para aiÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§iÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes
-                if 3300 <= adc_value <= 3400:  # MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsica Anterior 
-                    door_status["volume_action"] = "MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsica Anterior"
+                # Mapeamento dos valores do ADC para ações
+                if 3300 <= adc_value <= 3400:  # Música Anterior 
+                    door_status["volume_action"] = "Música Anterior"
                     xbmc.executebuiltin("PlayerControl(rewind)")
-                    xbmc.log(f"ADC {adc_value}: MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsica anterior", xbmc.LOGINFO)
-                elif 3600 <= adc_value <= 3700:  # PrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³xima MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsica
-                    door_status["volume_action"] = "PrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³xima MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsica"
+                    xbmc.log(f"ADC {adc_value}: Música anterior", xbmc.LOGINFO)
+                elif 3600 <= adc_value <= 3700:  # Próxima Música
+                    door_status["volume_action"] = "Próxima Música"
                     xbmc.executebuiltin("PlayerControl(forward)")
-                    xbmc.log(f"ADC {adc_value}: PrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³xima mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsica", xbmc.LOGINFO)
-                elif 4090 <= adc_value <= 4095:  # Mute (inclui margem para estabilidade)
+                    xbmc.log(f"ADC {adc_value}: Próxima música", xbmc.LOGINFO)
+                elif 4090 <= adc_value <= 4095:  # Mute mantido pressionado
+                    # O play/pause já foi tratado; repetir a cada "Hold" ficaria alternando
                     door_status["volume_action"] = "Pause"
-                    xbmc.executebuiltin("PlayerControl(Play)")
-                    xbmc.log(f"ADC {adc_value}: MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsica Pausa (Pausa)", xbmc.LOGINFO)
+                    xbmc.log(f"ADC {adc_value}: Música Pausa (Pausa)", xbmc.LOGINFO)
                 elif 3880 <= adc_value <= 3930:  # Exemplo: Volume +
                     door_status["volume_action"] = "Volume +"
                     adjust_volume("up")
@@ -220,16 +221,16 @@ def parse_can_message(raw_data):
                 elif 4040 <= adc_value <= 4080:  # Exemplo: Volume -
                     door_status["volume_action"] = "Volume -"
                     adjust_volume("down")
-                    xbmc.log(f"ADC {adc_value}: Volume diminuiÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­do", xbmc.LOGINFO)
+                    xbmc.log(f"ADC {adc_value}: Volume diminuído", xbmc.LOGINFO)
                 elif 2300 <= adc_value <= 2450:  # Estado neutro
                     door_status["volume_action"] = "Neutro"
 
-            return  # Sai apÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³s processar ADC
+            return  # Sai após processar ADC
 
         parts = raw_data.split(" : ")
 
         if len(parts) < 2:
-            return  # Ignora mensagens invÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡lidas
+            return  # Ignora mensagens inválidas
 
         parts = raw_data.split(" : ")
         timestamp = int(parts[0])  # Exemplo: 227760806
@@ -244,21 +245,21 @@ def parse_can_message(raw_data):
                 door_status["alarm"] = "Desarmado"
                 xbmc.log("Alarme desarmado (ID 581 detectado)", xbmc.LOGINFO)
 
-        # Verifica mensagem de marcha riÃ© (CAN ID 0x3AA)
+        # Verifica mensagem de marcha ré (CAN ID 0x3AA)
         elif can_id == "3aa":
-            # Exemplo de dados: 00 22 20 (nÃ£o engatada) ou 00 22 21 (engatada)
-            gear_byte = can_data[2]  # Ãšltimo byte
+            # Exemplo de dados: 00 22 20 (não engatada) ou 00 22 21 (engatada)
+            gear_byte = can_data[2]  # Último byte
 
-            new_status = "Engatada" if gear_byte == "21" else "NÃ£o Engatada"
+            new_status = "Engatada" if gear_byte == "21" else "Não Engatada"
 
             with status_lock:
                 if door_status["reverse_gear"] != new_status:
                     door_status["reverse_gear"] = new_status
-                    xbmc.log(f"Marcha riÃ©: {new_status}", xbmc.LOGINFO)
+                    xbmc.log(f"Marcha ré: {new_status}", xbmc.LOGINFO)
 
         elif can_id == "3b3":
 
-            if len(parts) < 6:
+            if len(can_data) < 3:
                 return
             
             byte1 = can_data[1]  # Segundo byte
@@ -271,7 +272,11 @@ def parse_can_message(raw_data):
                     door_status["lighting"] = "Escuro"
                     xbmc.log("Ambiente escuro detectado (Byte 1 = 0x88)", xbmc.LOGINFO)
 
-            last_bytes = ' '.join(can_data[-2:]).upper()
+            # O firmware envia os bytes em hexadecimal sem zero à esquerda ("4", não "04")
+            try:
+                last_bytes = ' '.join(format(int(b, 16), 'x') for b in can_data[-2:])
+            except ValueError:
+                return
 
             xbmc.log(f"Debug last_bytes: {str(last_bytes)}", xbmc.LOGINFO)
 
@@ -285,7 +290,7 @@ def parse_can_message(raw_data):
                 "82 10": { "driver": "Fechada", "passenger": "Aberta", "rear_left": "Fechada", "rear_right": "Aberta", "trunk": "Fechado" },
                 "82 34": { "driver": "Aberta", "passenger": "Aberta", "rear_left": "Fechada", "rear_right": "Aberta", "trunk": "Aberto" },
                 "81 34": { "driver": "Aberta", "passenger": "Aberta", "rear_left": "Aberta", "rear_right": "Fechada", "trunk": "Aberto" },
-                "80 04": { "driver": "Fechada", "passenger": "Fechada", "rear_left": "Fechada", "rear_right": "Fechada", "trunk": "Aberto" },
+                "80 4" : { "driver": "Fechada", "passenger": "Fechada", "rear_left": "Fechada", "rear_right": "Fechada", "trunk": "Aberto" },
                 "81 0" : { "driver": "Fechada", "passenger": "Fechada", "rear_left": "Aberta", "rear_right": "Fechada", "trunk": "Fechado" },
                 "82 0" : { "driver": "Fechada", "passenger": "Fechada", "rear_left": "Fechada", "rear_right": "Aberta", "trunk": "Fechado" },
                 "83 34": { "driver": "Aberta", "passenger": "Aberta", "rear_left": "Aberta", "rear_right": "Aberta", "trunk": "Aberto" },
@@ -316,7 +321,7 @@ class ReverseVideoPlayer(xbmc.Player):
         self.ffmpeg_error_log = None
         self.ffmpeg_start_error = None
         self.previous_item = None  # Armazena o item anterior (arquivo ou playlist)
-        self.previous_position = 0  # Armazena a posiÃ§Ã£o de reproduÃ§Ã£o
+        self.previous_position = 0  # Armazena a posição de reprodução
         self.previous_media = None
         self.previous_playlist_items = None
         self.previous_playlist_index = 0
@@ -541,22 +546,15 @@ class ReverseVideoPlayer(xbmc.Player):
                 self.pipe_path = os.path.join(tmp_dir, "video_pipe")
                 self.ffmpeg_output = self.pipe_path
             elif camera_config['type'] == "usb":
-                device = camera_config['url']
-                self.ffmpeg_input = [
-                    "-f", "v4l2", 
-                    "-input_format", "mjpeg",
-                    "-video_size", f"{camera_config['width']}x{camera_config['height']}",
-                    "-framerate", str(camera_config['fps']),
-                    "-i", device
-                ]
-            else:  # file ou stream fallback
-                if xbmcvfs.exists(camera_config['url']):
-                    self.ffmpeg_input = ["-re", "-i", camera_config['url']]
-                else:
-                    # Usa o fallback
-                    fallback_url = "special://home/addons/skin.CarPc-Carbon/resources/reverse_camera.mp4"
-                    self.ffmpeg_input = ["-re", "-i", fallback_url]
-                    xbmc.log(f"Arquivo não encontrado: {camera_config['url]}, usando fallback", xbmc.LOGINFO)
+                # Câmera USB: usa o dispositivo configurado em "video_device"
+                device = self._get_setting_value("video_device", "") or camera_config['url']
+                self.ffmpeg_input = ["-f", "v4l2", "-input_format", "mjpeg", "-i", device]
+            else:  # file ou stream
+                # O FFmpeg não entende caminhos special://, então converte para o caminho real
+                source = xbmcvfs.translatePath(camera_config['url'])
+                if not xbmcvfs.exists(source):
+                    xbmc.log(f"Arquivo não encontrado: {camera_config['url']}", xbmc.LOGERROR)
+                self.ffmpeg_input = ["-re", "-i", source]
 
     def _jsonrpc(self, payload):
         response = xbmc.executeJSONRPC(json.dumps(payload))
@@ -565,7 +563,7 @@ class ReverseVideoPlayer(xbmc.Player):
         try:
             return json.loads(response)
         except Exception:
-            xbmc.log(f"JSONRPC invÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡lido: {response}", xbmc.LOGERROR)
+            xbmc.log(f"JSONRPC inválido: {response}", xbmc.LOGERROR)
             return {}
 
     def _wait_for_playback(self, timeout=3.0):
@@ -720,9 +718,9 @@ class ReverseVideoPlayer(xbmc.Player):
         return {"items": file_items, "position": position, "playlistid": playlistid}
 
     def save_current_playback(self):
-        """Salva o estado da reproduÃ§Ã£o atual antes de exibir a ciÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢mera."""
+        """Salva o estado da reprodução atual antes de exibir a câmera."""
         if self.isPlaying():
-            self.previous_position = self.getTime()  # PosiÃ§Ã£o atual em segundos
+            self.previous_position = self.getTime()  # Posição atual em segundos
             self.previous_media = None
             self.previous_playlist_items = None
             self.previous_playlist_index = 0
@@ -736,13 +734,13 @@ class ReverseVideoPlayer(xbmc.Player):
                 self.previous_playlist_items = snapshot["items"]
                 self.previous_playlist_index = snapshot["position"]
                 self.previous_playlist_id = snapshot.get("playlistid")
-                xbmc.log(f"Salvando playlist com {len(self.previous_playlist_items)} itens na posiÃ§Ã£o {self.previous_playlist_index} e tempo {self.previous_position}", xbmc.LOGINFO)
-                xbmc.log("ReverseVideoPlayer: playlist salva para restauraÃ§Ã£o", xbmc.LOGINFO)
+                xbmc.log(f"Salvando playlist com {len(self.previous_playlist_items)} itens na posição {self.previous_playlist_index} e tempo {self.previous_position}", xbmc.LOGINFO)
+                xbmc.log("ReverseVideoPlayer: playlist salva para restauração", xbmc.LOGINFO)
             else:
                 self.previous_media = self.getPlayingFile()  # Arquivo ou URL atual
-                xbmc.log(f"Salvando miÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­dia anterior: {self.previous_media} na posiÃ§Ã£o {self.previous_position}", xbmc.LOGINFO)
+                xbmc.log(f"Salvando mídia anterior: {self.previous_media} na posição {self.previous_position}", xbmc.LOGINFO)
 
-            self.pause()  # Pausa a reproduÃ§Ã£o
+            self.pause()  # Pausa a reprodução
         else:
             self.previous_media = None
             self.previous_position = 0
@@ -933,8 +931,10 @@ class ReverseVideoPlayer(xbmc.Player):
             self.playing = True
             xbmc.executebuiltin("ActivateWindow(fullscreenvideo)")
     def stop_reverse_video(self):
-        if self.playing:
-            xbmc.log("Parando play_reverse_video", xbmc.LOGINFO)
+        if not self.playing:
+            # A câmera não está na tela: não interrompe o que estiver tocando
+            return
+        xbmc.log("Parando play_reverse_video", xbmc.LOGINFO)
         try:
             self.stop()
         except Exception as e:
@@ -959,7 +959,7 @@ class ReverseVideoPlayer(xbmc.Player):
         # restaura imediatamente o playback anterior
         self.restore_previous_playback(fast=True)
 def serial_worker():
-    """Thread para comunicaÃ§Ã£o serial com otimizaiÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§iÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes"""
+    """Thread para comunicação serial com otimizações"""
     global serial_conn
     config = get_serial_config()
     ser = None
@@ -968,7 +968,9 @@ def serial_worker():
         try:
             if not ser:
                 ser = serial.Serial(**config)
-                xbmc.log(f"ConexiÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o serial iniciada em {config['port']}", xbmc.LOGINFO)
+                with serial_lock:
+                    serial_conn = ser
+                xbmc.log(f"Conexão serial iniciada em {config['port']}", xbmc.LOGINFO)
 
             if ser.in_waiting > 0:
                 raw = ser.readline().decode('utf-8', errors='ignore').strip()
@@ -979,8 +981,13 @@ def serial_worker():
 
         except serial.SerialException as e:
             xbmc.log(f"Erro serial: {str(e)}", xbmc.LOGERROR)
+            with serial_lock:
+                serial_conn = None
             if ser:
-                ser.close()
+                try:
+                    ser.close()
+                except Exception:
+                    pass
                 ser = None
             monitor.waitForAbort(5)
 
@@ -988,197 +995,99 @@ def serial_worker():
             xbmc.log(f"Erro geral: {str(e)}", xbmc.LOGERROR)
             monitor.waitForAbort(1)
 
+    with serial_lock:
+        serial_conn = None
     if ser and ser.is_open:
         ser.close()
 
 def enviar_serial(cmd):
-    global serial_conn
-    if serial_conn and serial_conn.is_open:
-        with serial_lock:
-            serial_conn.write((cmd + "\n").encode())
-            xbmc.log(f"Enviado para serial: {cmd}", xbmc.LOGINFO)
-    else:
-        xbmc.log("Serial niÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o conectada para envio", xbmc.LOGERROR)
+    """Envia um comando de console para o ESP32 (ex.: "MOSFET=1")."""
+    with serial_lock:
+        if serial_conn and serial_conn.is_open:
+            try:
+                serial_conn.write((cmd + "\n").encode())
+                xbmc.log(f"Enviado para serial: {cmd}", xbmc.LOGINFO)
+                return True
+            except Exception as e:
+                xbmc.log(f"Erro ao enviar para serial: {str(e)}", xbmc.LOGERROR)
+                return False
+    xbmc.log("Serial não conectada para envio", xbmc.LOGERROR)
+    return False
 
-# VariÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡veis para controle de alertas de porta
-door_alert_active = False
-door_alert_timer = 0
-door_alert_thread = None
+# Controle do alerta de porta (xml/custom_DoorAlert_1152.xml)
+DOOR_ALERT_WINDOW = 1152
+DOOR_ALERT_SECONDS = 5
+door_alert_lock = threading.Lock()
+door_alert_generation = 0
 
-# VariÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡veis para controle da câmera de ré
-reverse_camera_active = False
-reverse_camera_dialog = None
+DOOR_NAMES = {
+    "driver": "Porta Motorista",
+    "passenger": "Porta Passageiro",
+    "rear_left": "Porta Traseira Esquerda",
+    "rear_right": "Porta Traseira Direita",
+    "trunk": "Porta-malas"
+}
 
 def show_door_alert(door_name, status):
-    """Exibe um alerta visual quando uma porta ÃƒÆ’Ã¢â‚¬Âº aberta ou fechada"""
-    global door_alert_active, door_alert_timer
-    
+    """Exibe um alerta visual quando uma porta é aberta ou fechada"""
+    global door_alert_generation
+
     try:
-        # Define a mensagem de alerta
-        door_names = {
-            "driver": "Porta Motorista",
-            "passenger": "Porta Passageiro", 
-            "rear_left": "Porta Traseira Esquerda",
-            "rear_right": "Porta Traseira Direita",
-            "trunk": "Porta-malas"
-        }
-        
-        door_display_name = door_names.get(door_name, door_name.title())
+        door_display_name = DOOR_NAMES.get(door_name, door_name.title())
         message = f"{door_display_name} {status}"
-        
-        # Configura as propriedades do alerta
+
         window = xbmcgui.Window(10000)
         window.setProperty("door_door", door_display_name)
         window.setProperty("door_status", status)
         window.setProperty("door_alert_message", message)
-        window.setProperty("door_icon", "icon_door.png")
-        
-        # Exibe o alerta
-        xbmc.executebuiltin("ActivateWindow(dooralert)")
+        window.setProperty("door_timer", str(DOOR_ALERT_SECONDS))
+
+        with door_alert_lock:
+            door_alert_generation += 1
+            generation = door_alert_generation
+
+        xbmc.executebuiltin(f"ActivateWindow({DOOR_ALERT_WINDOW})")
         xbmc.log(f"Alerta de porta exibido: {message}", xbmc.LOGINFO)
-        
-        # Inicia o contador para fechar automaticamente
-        door_alert_active = True
-        door_alert_timer = 5  # 5 segundos
-        
-        # Inicia thread do contador
-        global alert_timer_thread
-        alert_timer_thread = threading.Thread(target=door_alert_timer_worker, daemon=True)
-        alert_timer_thread.start()
-        
+
+        threading.Thread(target=door_alert_timer_worker, args=(generation,), daemon=True).start()
+
     except Exception as e:
         xbmc.log(f"Erro ao exibir alerta de porta: {str(e)}", xbmc.LOGERROR)
 
-def door_alert_timer_worker():
-    """Worker para o contador de tempo do alerta"""
-    global door_alert_active, door_alert_timer
-    
-    while door_alert_active and door_alert_timer > 0:
-        time.sleep(1)
-        door_alert_timer -= 1
-        
-        # Atualiza o contador na tela
-        if door_alert_timer > 0:
-            window = xbmcgui.Window(10000)
-            window.setProperty("door_timer", str(door_alert_timer))
-    
-    # Fecha o alerta automaticamente quando o tempo acabar
-    if door_alert_timer == 0:
-        xbmc.executebuiltin("Dialog.Close(dooralert)")
-        door_alert_active = False
-        xbmc.log("Alerta de porta fechado automaticamente", xbmc.LOGINFO)
+def door_alert_timer_worker(generation):
+    """Contador que fecha o alerta. Um alerta mais novo assume o controle."""
+    window = xbmcgui.Window(10000)
+    remaining = DOOR_ALERT_SECONDS
+
+    while remaining > 0:
+        if monitor.waitForAbort(1):
+            return
+        with door_alert_lock:
+            if generation != door_alert_generation:
+                return  # outro alerta foi exibido depois deste
+        remaining -= 1
+        window.setProperty("door_timer", str(remaining))
+
+    xbmc.executebuiltin(f"Dialog.Close({DOOR_ALERT_WINDOW})")
+    xbmc.log("Alerta de porta fechado automaticamente", xbmc.LOGINFO)
 
 def check_door_alerts(current_state, last_state):
     """Verifica mudanças nas portas e exibe alertas"""
-    global door_alert_active
-    
-    # Lista de portas para monitorar
-    doors = ["driver", "passenger", "rear_left", "rear_right", "trunk"]
-    
-    for door in doors:
-        current_door_status = current_state.get(door, "Fechada")
-        last_door_status = last_state.get(door, "Fechada")
-        
-        # Se a porta foi aberta (mudou de fechada para aberta)
-        if last_door_status == "Fechada" and current_door_status == "Aberta":
-            if not door_alert_active:  # Evita alertas consecutivos
-                show_door_alert(door, "ABERTA!")
-        
-        # Se a porta foi fechada (mudou de aberta para fechada)
-        elif last_door_status == "Aberta" and current_door_status == "Fechada":
-            show_door_alert(door, "Fechada")
+    if not last_state:
+        return  # primeira leitura: ainda não há estado anterior para comparar
 
-class ReverseCameraManager:
-    """Gerenciador de câmera de ré com interface visual"""
-    
-    def __init__(self):
-        self.camera_window = None
-        self.video_player = None
-        self.camera_active = False
-        self.streaming_url = None
-        self.distance_sensors = {
-            "left": 2.5,
-            "center": 1.2,
-            "right": 3.1
-        }
-        
-    def start_reverse_camera(self):
-        """Inicia a câmera de ré"""
-        global reverse_camera_active
-        
-        if not self.camera_active:
-            try:
-                # Abre o diálogo da câmera de ré
-                xbmc.executebuiltin("ActivateWindow(reversecamera)")
-                xbmc.log("Câmera de ré iniciada", xbmc.LOGINFO)
-                
-                # Inicia o player de vídeo se necessário
-                self.video_player = ReverseVideoPlayer()
-                self.video_player.play_reverse_video()
-                
-                # Atualiza o status
-                self.camera_active = True
-                reverse_camera_active = True
-                
-                # Inicia atualização de sensores em background
-                threading.Thread(target=self.update_distance_sensors, daemon=True).start()
-                
-            except Exception as e:
-                xbmc.log(f"Erro ao iniciar câmera de ré: {str(e)}", xbmc.LOGERROR)
-    
-    def stop_reverse_camera(self):
-        """Para a câmera de ré"""
-        global reverse_camera_active
-        
-        if self.camera_active:
-            try:
-                # Fecha o diálogo
-                xbmc.executebuiltin("Dialog.Close(reversecamera)")
-                
-                # Para o player de vídeo
-                if self.video_player:
-                    self.video_player.stop_reverse_video()
-                    self.video_player = None
-                
-                # Atualiza o status
-                self.camera_active = False
-                reverse_camera_active = False
-                
-                xbmc.log("Câmera de ré parada", xbmc.LOGINFO)
-                
-            except Exception as e:
-                xbmc.log(f"Erro ao parar câmera de ré: {str(e)}", xbmc.LOGERROR)
-    
-    def update_distance_sensors(self):
-        """Atualiza as distâncias simuladas dos sensores"""
-        import random
-        
-        while self.camera_active and not monitor.abortRequested():
-            try:
-                # Simula variação nas distâncias
-                self.distance_sensors["left"] = max(0.1, self.distance_sensors["left"] + random.uniform(-0.2, 0.2))
-                self.distance_sensors["center"] = max(0.1, self.distance_sensors["center"] + random.uniform(-0.1, 0.1))
-                self.distance_sensors["right"] = max(0.1, self.distance_sensors["right"] + random.uniform(-0.2, 0.2))
-                
-                # Atualiza as propriedades na interface
-                window = xbmcgui.Window(13000)
-                window.setProperty("distance_left", f"{self.distance_sensors['left']:.1f}m")
-                window.setProperty("distance_center", f"{self.distance_sensors['center']:.1f}m") 
-                window.setProperty("distance_right", f"{self.distance_sensors['right']:.1f}m")
-                
-                xbmc.log(f"Sensores atualizados: {self.distance_sensors}", xbmc.LOGINFO)
-                
-                time.sleep(1.0)  # Atualiza a cada segundo
-                
-            except Exception as e:
-                xbmc.log(f"Erro ao atualizar sensores: {str(e)}", xbmc.LOGERROR)
-                break
+    for door in DOOR_NAMES:
+        # O porta-malas usa "Aberto"/"Fechado"; as portas, "Aberta"/"Fechada"
+        is_open = current_state.get(door, "").startswith("Abert")
+        was_open = last_state.get(door, "").startswith("Abert")
 
-# Instância global do gerenciador de câmera de ré
-reverse_camera_manager = ReverseCameraManager()
+        if is_open and not was_open:
+            show_door_alert(door, "ABERTA!" if door != "trunk" else "ABERTO!")
+        elif was_open and not is_open:
+            show_door_alert(door, "Fechada" if door != "trunk" else "Fechado")
 
 def ui_worker():
-    """AtualizaÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o otimizada da interface"""
+    """Atualiza£o otimizada da interface"""
     window = xbmcgui.Window(10000)  # Acessa a Home do Kodi
     last_state = {}
     video_player = ReverseVideoPlayer()
@@ -1188,45 +1097,43 @@ def ui_worker():
             with status_lock:
                 current_state = door_status.copy()
             
-            # Controle do viÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­deo de marcha riÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©
+            # Controle do vídeo de marcha ré
             if current_state.get("reverse_gear") != last_state.get("reverse_gear"):
                 if current_state["reverse_gear"] == "Engatada":
-                    # Usa o gerenciador de câmera de ré
-                    reverse_camera_manager.start_reverse_camera()
+                    video_player.play_reverse_video()
                 else:
-                    # Para a câmera de ré
-                    reverse_camera_manager.stop_reverse_camera()
+                    video_player.stop_reverse_video()
 
             # Verifica mudanças nas portas e exibe alertas
             check_door_alerts(current_state, last_state)
 
             if current_state != last_state:
                 # Atualiza as propriedades no Kodi com o status das portas
-                window.setProperty("driver_door", door_status["driver"])
-                window.setProperty("passenger_door", door_status["passenger"])
-                window.setProperty("rear_left_door", door_status["rear_left"])
-                window.setProperty("rear_right_door", door_status["rear_right"])
-                window.setProperty("trunk", door_status["trunk"])
+                window.setProperty("driver_door", current_state["driver"])
+                window.setProperty("passenger_door", current_state["passenger"])
+                window.setProperty("rear_left_door", current_state["rear_left"])
+                window.setProperty("rear_right_door", current_state["rear_right"])
+                window.setProperty("trunk", current_state["trunk"])
                 window.setProperty("reverse_gear", current_state["reverse_gear"])
                 last_state = current_state.copy()
                 xbmc.log("UI atualizada", xbmc.LOGINFO)
-                # Adicione rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³tulos descritivos nos logs
-                xbmc.log(f"Porta Motorista: {door_status['driver']}", xbmc.LOGINFO)
-                xbmc.log(f"Porta Passageiro: {door_status['passenger']}", xbmc.LOGINFO)
-                xbmc.log(f"Porta Traseira Esquerda: {door_status['rear_left']}", xbmc.LOGINFO)
-                xbmc.log(f"Porta Traseira Direita: {door_status['rear_right']}", xbmc.LOGINFO)
-                xbmc.log(f"Porta-malas: {door_status['trunk']}", xbmc.LOGINFO)
-                xbmc.log(f"Marcha RiÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©: {current_state['reverse_gear']}", xbmc.LOGINFO)
+                # Adicione rótulos descritivos nos logs
+                xbmc.log(f"Porta Motorista: {current_state['driver']}", xbmc.LOGINFO)
+                xbmc.log(f"Porta Passageiro: {current_state['passenger']}", xbmc.LOGINFO)
+                xbmc.log(f"Porta Traseira Esquerda: {current_state['rear_left']}", xbmc.LOGINFO)
+                xbmc.log(f"Porta Traseira Direita: {current_state['rear_right']}", xbmc.LOGINFO)
+                xbmc.log(f"Porta-malas: {current_state['trunk']}", xbmc.LOGINFO)
+                xbmc.log(f"Marcha Ré: {current_state['reverse_gear']}", xbmc.LOGINFO)
             
-            monitor.waitForAbort(0.5)  # Espera 0.5s de forma niÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o-bloqueante
+            monitor.waitForAbort(0.5)  # Espera 0.5s de forma não-bloqueante
 
         except Exception as e:
             xbmc.log(f"Erro UI: {str(e)}", xbmc.LOGERROR)
             monitor.waitForAbort(1)
 
 if __name__ == "__main__":
-    xbmc.log("ServiiÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§o iniciado", xbmc.LOGINFO)
-    # mostrar_dialogo_desligamento() # SÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ Desativar para testar o Dialog
+    xbmc.log("Serviço iniciado", xbmc.LOGINFO)
+    # mostrar_dialogo_desligamento() # Só Desativar para testar o Dialog
 
     # Inicia threads
     serial_thread = threading.Thread(target=serial_worker, daemon=True)
@@ -1235,7 +1142,7 @@ if __name__ == "__main__":
     serial_thread.start()
     ui_thread.start()
 
-    # MantiÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©m o serviiÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§o ativo
+    # Mantém o serviço ativo
     while not monitor.abortRequested():
         monitor.waitForAbort(1)
 

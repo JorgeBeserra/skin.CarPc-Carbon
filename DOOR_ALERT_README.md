@@ -9,7 +9,7 @@
    - Função `check_door_alerts()` - Monitora mudanças nas portas
    - Integração com o `ui_worker()` existente
 
-2. **xml/DialogDoorAlert.xml** - Novo diálogo de alerta:
+2. **xml/custom_DoorAlert_1152.xml** - Diálogo de alerta (janela 1152):
    - Alerta visual com posicionamento estratégico
    - Timer automático de 5 segundos
    - Fechamento manual ou automático
@@ -18,7 +18,7 @@
 ## Como Instalar:
 
 1. Copie os arquivos modificados para o diretório do addon:
-   - `DialogDoorAlert.xml` → `skin.CarPc-Carbon/xml/`
+   - `custom_DoorAlert_1152.xml` → `skin.CarPc-Carbon/xml/`
    - `service.py` → `skin.CarPc-Carbon/`
 
 2. Reinicie o Kodi
@@ -33,12 +33,12 @@
 
 ## Personalização:
 
-- Modifique o tempo do contador alterando `door_alert_timer = 5` na função `show_door_alert()`
+- Modifique o tempo do contador alterando `DOOR_ALERT_SECONDS = 5` no `service.py`
 - Altere a posição do diálogo modificando as coordenadas no XML
 - Mude o ícone alterando o nome do arquivo na tag `<texture>`
 
 ## Observações:
 
-- O alerta só é exibido quando uma porta mudar de "Fechada" para "Aberta"
-- Não mostra alertas consecutivos para evitar spam
+- O alerta é exibido quando uma porta (ou o porta-malas) abre ou fecha
+- Um alerta novo substitui o anterior e reinicia o contador
 - O sistema é compatível com o monitoramento CAN existente

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Alerta de porta aberta/fechada. Aberto pelo service.py com ActivateWindow(1152).
+     O Kodi so carrega janelas proprias de arquivos custom*.xml com id entre 1100 e 1199. -->
+<window id="1152" type="dialog">
+	<defaultcontrol always="true">1</defaultcontrol>
+	<include>dialogeffect</include>
+	<coordinates>
+		<posx>453</posx>
+		<posy>170</posy>
+	</coordinates>
+	<controls>
+		<control type="image">
+			<posx>0</posx>
+			<posy>0</posy>
+			<width>800</width>
+			<height>70</height>
+			<texture border="5">dialog_header.png</texture>
+		</control>
+		<control type="image">
+			<posx>0</posx>
+			<posy>70</posy>
+			<width>800</width>
+			<height>250</height>
+			<texture>dialog_back.png</texture>
+		</control>
+		<control type="label">
+			<description>Titulo</description>
+			<posx>20</posx>
+			<posy>5</posy>
+			<width>700</width>
+			<include>WindowTitleCommons</include>
+			<label>Portas</label>
+		</control>
+		<control type="group">
+			<posx>730</posx>
+			<posy>5</posy>
+			<include>DialogCloseButtonCommons</include>
+		</control>
+		<control type="label">
+			<description>Mensagem</description>
+			<posx>20</posx>
+			<posy>85</posy>
+			<width>760</width>
+			<height>90</height>
+			<align>center</align>
+			<aligny>center</aligny>
+			<font>font35_title</font>
+			<textcolor>white</textcolor>
+			<label>$INFO[Window(Home).Property(door_alert_message)]</label>
+		</control>
+		<control type="label">
+			<description>Contador</description>
+			<posx>20</posx>
+			<posy>175</posy>
+			<width>760</width>
+			<height>40</height>
+			<align>center</align>
+			<aligny>center</aligny>
+			<font>font20_title</font>
+			<textcolor>grey</textcolor>
+			<label>Fecha em $INFO[Window(Home).Property(door_timer)]s</label>
+			<visible>!String.IsEmpty(Window(Home).Property(door_timer))</visible>
+		</control>
+		<control type="button" id="1">
+			<description>Fechar</description>
+			<posx>275</posx>
+			<posy>225</posy>
+			<width>250</width>
+			<height>75</height>
+			<label>Fechar</label>
+			<font>font24_title</font>
+			<textcolor>FFFFFFFF</textcolor>
+			<focusedcolor>FF00A8FF</focusedcolor>
+			<align>center</align>
+			<aligny>center</aligny>
+			<texturefocus>dialogbutton-focus.png</texturefocus>
+			<texturenofocus>dialogbutton-nofocus.png</texturenofocus>
+			<onclick>Dialog.Close(1152)</onclick>
+		</control>
+	</controls>
+</window>
