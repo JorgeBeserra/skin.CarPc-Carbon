@@ -18,6 +18,7 @@ from xbmc import Monitor, Player
 
 from lib.ReverseGearManager import ReverseGearManager
 from lib.can_parser import CANParser
+from lib.night_mode import NightMode
 
 serial_conn = None
 serial_lock = threading.Lock()
@@ -56,6 +57,7 @@ door_status = {
     "passenger": "Fechada",
     "rear_left": "Fechada",
     "rear_right": "Fechada",
+    "lighting": None,  # desconhecido ate receber um estado valido do sensor
     "trunk": "Fechado",
     "reverse_gear": "Não Engatada"
 }
@@ -235,7 +237,7 @@ def parse_can_message(raw_data):
         parts = raw_data.split(" : ")
         timestamp = int(parts[0])  # Exemplo: 227760806
         frame_parts = parts[1].split(" ")
-        can_id = frame_parts[0]    # Exemplo: 3aa
+        can_id = frame_parts[0].lower()    # Exemplo: 3aa
         can_data = frame_parts[4:]     # Exemplo: ['0', '22', '20', '0', '0', '0', '0', '0']
 
         # 581 S 0 8 81 0 ff ff ff ff ff ff > CAN ID: Para quando desarma o Alarme
@@ -262,7 +264,7 @@ def parse_can_message(raw_data):
             if len(can_data) < 3:
                 return
             
-            byte1 = can_data[1]  # Segundo byte
+            byte1 = format(int(can_data[1], 16), "02x")  # Segundo byte
             if byte1 == "48":
                 with status_lock:
                     door_status["lighting"] = "Claro"
@@ -1091,12 +1093,21 @@ def ui_worker():
     window = xbmcgui.Window(10000)  # Acessa a Home do Kodi
     last_state = {}
     video_player = ReverseVideoPlayer()
+    night_mode = NightMode()
+    window.clearProperty("carpc_night_mode")
 
     while not monitor.abortRequested():
         try:
             with status_lock:
                 current_state = door_status.copy()
             
+            # Sem sleep na leitura serial: confirma iluminacao na thread de UI.
+            night = night_mode.update(current_state.get("lighting"))
+            night_value = "true" if night else "false"
+            if window.getProperty("carpc_night_mode") != night_value:
+                window.setProperty("carpc_night_mode", night_value)
+                xbmc.log(f"Modo noturno: {night_value}", xbmc.LOGINFO)
+
             # Controle do vídeo de marcha ré
             if current_state.get("reverse_gear") != last_state.get("reverse_gear"):
                 if current_state["reverse_gear"] == "Engatada":
@@ -1146,4 +1157,5 @@ if __name__ == "__main__":
     while not monitor.abortRequested():
         monitor.waitForAbort(1)
 
+    xbmcgui.Window(10000).clearProperty("carpc_night_mode")
     xbmc.log("CarPc-Carbon Encerrado", xbmc.LOGINFO)
