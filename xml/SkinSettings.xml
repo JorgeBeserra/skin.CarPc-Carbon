@@ -988,7 +988,7 @@
 					<texturefocus>list_focus.png</texturefocus>
 					<texturenofocus border="40,0,40,5">list_nofocus.png</texturenofocus>
 					<pulseonselect>false</pulseonselect>
-					<label>Resume: save interval (seconds, default 10)</label>
+					<label>Resume: save interval (seconds, default 5)</label>
 					<label2>$INFO[Skin.String(ResumeSaveInterval)]</label2>
 					<onclick>Skin.SetNumeric(ResumeSaveInterval)</onclick>
 					<visible>!Skin.HasSetting(DisableResume)</visible>
