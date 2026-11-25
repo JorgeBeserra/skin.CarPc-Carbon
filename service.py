@@ -19,6 +19,7 @@ from xbmc import Monitor, Player
 from lib.ReverseGearManager import ReverseGearManager
 from lib.can_parser import CANParser
 from lib.night_mode import NightMode
+from lib.PlaybackResumer import PlaybackResumer
 
 serial_conn = None
 serial_lock = threading.Lock()
@@ -62,6 +63,9 @@ door_status = {
     "reverse_gear": "Não Engatada"
 }
 status_lock = threading.Lock()
+
+# Referência ao player da câmera de ré (criado na ui_worker), usada pelo resume
+reverse_player_ref = {"player": None}
 
 
 def adjust_volume(direction):
@@ -1093,6 +1097,7 @@ def ui_worker():
     window = xbmcgui.Window(10000)  # Acessa a Home do Kodi
     last_state = {}
     video_player = ReverseVideoPlayer()
+    reverse_player_ref["player"] = video_player
     night_mode = NightMode()
     window.clearProperty("carpc_night_mode")
 
@@ -1142,6 +1147,30 @@ def ui_worker():
             xbmc.log(f"Erro UI: {str(e)}", xbmc.LOGERROR)
             monitor.waitForAbort(1)
 
+def _reverse_camera_active():
+    player = reverse_player_ref.get("player")
+    if player and player.playing:
+        return True
+    with status_lock:
+        return door_status.get("reverse_gear") == "Engatada"
+
+def _reverse_camera_url():
+    player = reverse_player_ref.get("player")
+    return player.play_url if player else None
+
+def resume_worker():
+    """Resume de reprodução (substitui o add-on externo de playback resumer).
+    O player precisa ser criado nesta thread para receber os callbacks."""
+    try:
+        resumer = PlaybackResumer(
+            monitor,
+            is_suspended=_reverse_camera_active,
+            ignored_file=_reverse_camera_url,
+        )
+        resumer.run()
+    except Exception as e:
+        xbmc.log(f"Erro no serviço de resume: {str(e)}", xbmc.LOGERROR)
+
 if __name__ == "__main__":
     xbmc.log("Serviço iniciado", xbmc.LOGINFO)
     # mostrar_dialogo_desligamento() # Só Desativar para testar o Dialog
@@ -1149,9 +1178,11 @@ if __name__ == "__main__":
     # Inicia threads
     serial_thread = threading.Thread(target=serial_worker, daemon=True)
     ui_thread = threading.Thread(target=ui_worker, daemon=True)
+    resume_thread = threading.Thread(target=resume_worker, daemon=True)
 
     serial_thread.start()
     ui_thread.start()
+    resume_thread.start()
 
     # Mantém o serviço ativo
     while not monitor.abortRequested():

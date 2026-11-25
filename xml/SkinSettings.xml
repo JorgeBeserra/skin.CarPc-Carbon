@@ -966,6 +966,47 @@
 					<selected>Skin.HasSetting(CustomLabelButton6)</selected>
 					<visible>Skin.HasSetting(UseCustomLabelButton6)</visible>
 				</control>
+				<control type="radiobutton" id="913">
+					<width>$PARAM[panel-width]</width>
+					<height>80</height>
+					<aligny>center</aligny>
+					<font>font24_title</font>
+					<textcolor>white</textcolor>
+					<texturefocus>list_focus.png</texturefocus>
+					<texturenofocus border="40,0,40,5">bara_jos.png</texturenofocus>
+					<pulseonselect>false</pulseonselect>
+					<label>Resume playback on startup</label>
+					<onclick>Skin.ToggleSetting(DisableResume)</onclick>
+					<selected>!Skin.HasSetting(DisableResume)</selected>
+				</control>
+				<control type="button" id="914">
+					<width>$PARAM[panel-width]</width>
+					<height>80</height>
+					<aligny>center</aligny>
+					<font>font24_title</font>
+					<textcolor>white</textcolor>
+					<texturefocus>list_focus.png</texturefocus>
+					<texturenofocus border="40,0,40,5">list_nofocus.png</texturenofocus>
+					<pulseonselect>false</pulseonselect>
+					<label>Resume: save interval (seconds, default 10)</label>
+					<label2>$INFO[Skin.String(ResumeSaveInterval)]</label2>
+					<onclick>Skin.SetNumeric(ResumeSaveInterval)</onclick>
+					<visible>!Skin.HasSetting(DisableResume)</visible>
+				</control>
+				<control type="button" id="915">
+					<width>$PARAM[panel-width]</width>
+					<height>80</height>
+					<aligny>center</aligny>
+					<font>font24_title</font>
+					<textcolor>white</textcolor>
+					<texturefocus>list_focus.png</texturefocus>
+					<texturenofocus border="40,0,40,5">list_nofocus.png</texturenofocus>
+					<pulseonselect>false</pulseonselect>
+					<label>Resume: startup delay (seconds, default 0)</label>
+					<label2>$INFO[Skin.String(ResumeStartupDelay)]</label2>
+					<onclick>Skin.SetNumeric(ResumeStartupDelay)</onclick>
+					<visible>!Skin.HasSetting(DisableResume)</visible>
+				</control>
 			</control>
 		<include>Header</include>
 		<include>CommonNowPlaying</include>
