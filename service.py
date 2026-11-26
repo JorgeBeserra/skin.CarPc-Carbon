@@ -18,7 +18,7 @@ from xbmc import Monitor, Player
 
 from lib.ReverseGearManager import ReverseGearManager
 from lib.can_parser import CANParser
-from lib.night_mode import NightMode
+from lib.night_mode import NightMode, lighting_from_byte
 from lib.PlaybackResumer import PlaybackResumer
 
 serial_conn = None
@@ -268,15 +268,15 @@ def parse_can_message(raw_data):
             if len(can_data) < 3:
                 return
             
-            byte1 = format(int(can_data[1], 16), "02x")  # Segundo byte
-            if byte1 == "48":
+            try:
+                lighting = lighting_from_byte(int(can_data[1], 16))
+            except ValueError:
+                lighting = None
+            if lighting:
                 with status_lock:
-                    door_status["lighting"] = "Claro"
-                    xbmc.log("Ambiente claro detectado (Byte 1 = 0x48)", xbmc.LOGINFO)
-            elif byte1 == "88":
-                with status_lock:
-                    door_status["lighting"] = "Escuro"
-                    xbmc.log("Ambiente escuro detectado (Byte 1 = 0x88)", xbmc.LOGINFO)
+                    if door_status.get("lighting") != lighting:
+                        door_status["lighting"] = lighting
+                        xbmc.log(f"Luz ambiente: {lighting} (3B3 byte 1 = 0x{can_data[1]})", xbmc.LOGINFO)
 
             # O firmware envia os bytes em hexadecimal sem zero à esquerda ("4", não "04")
             try:
@@ -1108,6 +1108,9 @@ def ui_worker():
             
             # Sem sleep na leitura serial: confirma iluminacao na thread de UI.
             night = night_mode.update(current_state.get("lighting"))
+            # Nao escurece a camera de re (a imagem ja e escura a noite)
+            if night and _reverse_camera_active():
+                night = False
             night_value = "true" if night else "false"
             if window.getProperty("carpc_night_mode") != night_value:
                 window.setProperty("carpc_night_mode", night_value)

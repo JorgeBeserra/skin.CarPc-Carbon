@@ -27,3 +27,12 @@ class NightMode:
             self.pending = None
             self.since = None
         return self.active
+
+def lighting_from_byte(value):
+    """Byte 1 do CAN 0x3B3 (BCM Ford): bit 7 = escuro (0x88), bit 6 = claro (0x48).
+    Os outros bits mudam com o pisca-alerta (0x4A/0x8A), por isso testa so os bits."""
+    if value & 0x80:
+        return "Escuro"
+    if value & 0x40:
+        return "Claro"
+    return None

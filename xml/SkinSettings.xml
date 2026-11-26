@@ -1007,6 +1007,61 @@
 					<onclick>Skin.SetNumeric(ResumeStartupDelay)</onclick>
 					<visible>!Skin.HasSetting(DisableResume)</visible>
 				</control>
+				<control type="radiobutton" id="916">
+					<width>$PARAM[panel-width]</width>
+					<height>80</height>
+					<aligny>center</aligny>
+					<font>font24_title</font>
+					<textcolor>white</textcolor>
+					<texturefocus>list_focus.png</texturefocus>
+					<texturenofocus border="40,0,40,5">bara_jos.png</texturenofocus>
+					<pulseonselect>false</pulseonselect>
+					<label>Dim screen at night (car light sensor)</label>
+					<onclick>Skin.ToggleSetting(DisableNightDim)</onclick>
+					<selected>!Skin.HasSetting(DisableNightDim)</selected>
+				</control>
+				<control type="radiobutton" id="917">
+					<width>$PARAM[panel-width]</width>
+					<height>80</height>
+					<aligny>center</aligny>
+					<font>font24_title</font>
+					<textcolor>white</textcolor>
+					<texturefocus>list_focus.png</texturefocus>
+					<texturenofocus border="40,0,40,5">list_nofocus.png</texturenofocus>
+					<pulseonselect>false</pulseonselect>
+					<label>Night dimming: low (50%)</label>
+					<onclick>Skin.SetString(NightDimLevel,Low)</onclick>
+					<selected>String.IsEqual(Skin.String(NightDimLevel),Low)</selected>
+					<visible>!Skin.HasSetting(DisableNightDim)</visible>
+				</control>
+				<control type="radiobutton" id="918">
+					<width>$PARAM[panel-width]</width>
+					<height>80</height>
+					<aligny>center</aligny>
+					<font>font24_title</font>
+					<textcolor>white</textcolor>
+					<texturefocus>list_focus.png</texturefocus>
+					<texturenofocus border="40,0,40,5">list_nofocus.png</texturenofocus>
+					<pulseonselect>false</pulseonselect>
+					<label>Night dimming: medium (70%, default)</label>
+					<onclick>Skin.SetString(NightDimLevel,Medium)</onclick>
+					<selected>!String.IsEqual(Skin.String(NightDimLevel),Low) + !String.IsEqual(Skin.String(NightDimLevel),High)</selected>
+					<visible>!Skin.HasSetting(DisableNightDim)</visible>
+				</control>
+				<control type="radiobutton" id="919">
+					<width>$PARAM[panel-width]</width>
+					<height>80</height>
+					<aligny>center</aligny>
+					<font>font24_title</font>
+					<textcolor>white</textcolor>
+					<texturefocus>list_focus.png</texturefocus>
+					<texturenofocus border="40,0,40,5">list_nofocus.png</texturenofocus>
+					<pulseonselect>false</pulseonselect>
+					<label>Night dimming: high (85%)</label>
+					<onclick>Skin.SetString(NightDimLevel,High)</onclick>
+					<selected>String.IsEqual(Skin.String(NightDimLevel),High)</selected>
+					<visible>!Skin.HasSetting(DisableNightDim)</visible>
+				</control>
 			</control>
 		<include>Header</include>
 		<include>CommonNowPlaying</include>

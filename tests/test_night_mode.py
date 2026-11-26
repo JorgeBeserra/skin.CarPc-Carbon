@@ -1,5 +1,5 @@
 import unittest
-from lib.night_mode import NightMode
+from lib.night_mode import NightMode, lighting_from_byte
 
 
 class NightModeTest(unittest.TestCase):
@@ -39,6 +39,19 @@ class NightModeTest(unittest.TestCase):
         self.now = 8.0
         self.assertFalse(self.mode.update("Claro"))
 
+
+class LightingFromByteTest(unittest.TestCase):
+    def test_known_values(self):
+        self.assertEqual(lighting_from_byte(0x48), "Claro")
+        self.assertEqual(lighting_from_byte(0x88), "Escuro")
+
+    def test_hazard_does_not_hide_ambient_state(self):
+        self.assertEqual(lighting_from_byte(0x4A), "Claro")
+        self.assertEqual(lighting_from_byte(0x8A), "Escuro")
+
+    def test_unknown(self):
+        self.assertIsNone(lighting_from_byte(0x08))
+        self.assertIsNone(lighting_from_byte(0x00))
 
 if __name__ == "__main__":
     unittest.main()
