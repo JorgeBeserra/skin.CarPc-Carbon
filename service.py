@@ -19,6 +19,7 @@ from xbmc import Monitor, Player
 from lib.ReverseGearManager import ReverseGearManager
 from lib.can_parser import CANParser
 from lib.night_mode import NightMode, lighting_from_byte
+from lib.door_status import DOOR_BITS, DoorDebouncer, decode_doors
 from lib.PlaybackResumer import PlaybackResumer
 
 serial_conn = None
@@ -278,37 +279,14 @@ def parse_can_message(raw_data):
                         door_status["lighting"] = lighting
                         xbmc.log(f"Luz ambiente: {lighting} (3B3 byte 1 = 0x{can_data[1]})", xbmc.LOGINFO)
 
-            # O firmware envia os bytes em hexadecimal sem zero à esquerda ("4", não "04")
+            # Portas: bytes 6 e 7, lidos bit a bit (ver lib/door_status.py)
             try:
-                last_bytes = ' '.join(format(int(b, 16), 'x') for b in can_data[-2:])
+                doors = decode_doors([int(x, 16) for x in can_data])
             except ValueError:
-                return
-
-            xbmc.log(f"Debug last_bytes: {str(last_bytes)}", xbmc.LOGINFO)
-
-            # Mapeamento dos status das portas baseado na mensagem CAN
-            status_map = {
-                "80 0" : { "driver": "Fechada", "passenger": "Fechada", "rear_left": "Fechada", "rear_right": "Fechada", "trunk": "Fechado" },
-                "80 30": { "driver": "Fechada", "passenger": "Fechada", "rear_left": "Aberta", "rear_right": "Aberta", "trunk": "Aberto" },
-                "80 10": { "driver": "Fechada", "passenger": "Aberta", "rear_left": "Fechada", "rear_right": "Fechada", "trunk": "Fechado" },
-                "80 20": { "driver": "Aberta", "passenger": "Fechada", "rear_left": "Fechada", "rear_right": "Fechada", "trunk": "Fechado" },
-                "81 20": { "driver": "Aberta", "passenger": "Fechada", "rear_left": "Aberta", "rear_right": "Fechada", "trunk": "Fechado" },
-                "82 10": { "driver": "Fechada", "passenger": "Aberta", "rear_left": "Fechada", "rear_right": "Aberta", "trunk": "Fechado" },
-                "82 34": { "driver": "Aberta", "passenger": "Aberta", "rear_left": "Fechada", "rear_right": "Aberta", "trunk": "Aberto" },
-                "81 34": { "driver": "Aberta", "passenger": "Aberta", "rear_left": "Aberta", "rear_right": "Fechada", "trunk": "Aberto" },
-                "80 4" : { "driver": "Fechada", "passenger": "Fechada", "rear_left": "Fechada", "rear_right": "Fechada", "trunk": "Aberto" },
-                "81 0" : { "driver": "Fechada", "passenger": "Fechada", "rear_left": "Aberta", "rear_right": "Fechada", "trunk": "Fechado" },
-                "82 0" : { "driver": "Fechada", "passenger": "Fechada", "rear_left": "Fechada", "rear_right": "Aberta", "trunk": "Fechado" },
-                "83 34": { "driver": "Aberta", "passenger": "Aberta", "rear_left": "Aberta", "rear_right": "Aberta", "trunk": "Aberto" },
-                "83 14": { "driver": "Fechada", "passenger": "Aberta", "rear_left": "Aberta", "rear_right": "Aberta", "trunk": "Aberto" },
-                "83 24": { "driver": "Aberta", "passenger": "Fechada", "rear_left": "Aberta", "rear_right": "Aberta", "trunk": "Aberto" },
-                "83 30": { "driver": "Aberta", "passenger": "Aberta", "rear_left": "Aberta", "rear_right": "Aberta", "trunk": "Fechado" },
-            }
-
-            with status_lock:
-                if last_bytes in status_map:
-                    door_status.update(status_map[last_bytes])
-                    xbmc.log("Status atualizado", xbmc.LOGINFO)
+                doors = None
+            if doors:
+                with status_lock:
+                    door_status.update(doors)
 
     except Exception as e:
         xbmc.log(f"Erro ao processar CAN: {str(e)}", xbmc.LOGERROR)
@@ -1100,11 +1078,15 @@ def ui_worker():
     reverse_player_ref["player"] = video_player
     night_mode = NightMode()
     window.clearProperty("carpc_night_mode")
+    door_debouncer = DoorDebouncer()
 
     while not monitor.abortRequested():
         try:
             with status_lock:
                 current_state = door_status.copy()
+            # Confirma as portas so depois de 2 s estaveis (o sensor pode oscilar)
+            current_state.update(door_debouncer.update(
+                {door: current_state.get(door) for door, _, _ in DOOR_BITS}))
             
             # Sem sleep na leitura serial: confirma iluminacao na thread de UI.
             night = night_mode.update(current_state.get("lighting"))
