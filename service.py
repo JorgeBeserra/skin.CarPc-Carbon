@@ -942,14 +942,48 @@ class ReverseVideoPlayer(xbmc.Player):
 
         # restaura imediatamente o playback anterior
         self.restore_previous_playback(fast=True)
+SERIAL_PAUSE_PROP = "carpc_serial_pause_until"
+SERIAL_RELEASED_PROP = "carpc_serial_released"
+
+
+def serial_pause_requested(home):
+    """True enquanto o atualizador de firmware estiver com a porta serial."""
+    try:
+        until = float(home.getProperty(SERIAL_PAUSE_PROP) or 0)
+    except ValueError:
+        return False
+    return until > time.time()
+
+
 def serial_worker():
     """Thread para comunicação serial com otimizações"""
     global serial_conn
     config = get_serial_config()
     ser = None
 
+    home = xbmcgui.Window(10000)
+
     while not monitor.abortRequested():
         try:
+            # O atualizador de firmware pede a porta (scripts/firmware_update.py).
+            # O pedido expira sozinho para a serial nunca ficar parada para sempre.
+            if serial_pause_requested(home):
+                if ser:
+                    with serial_lock:
+                        serial_conn = None
+                    try:
+                        ser.close()
+                    except Exception:
+                        pass
+                    ser = None
+                    xbmc.log("Serial liberada para o atualizador de firmware", xbmc.LOGINFO)
+                home.setProperty(SERIAL_RELEASED_PROP, "true")
+                monitor.waitForAbort(0.5)
+                continue
+            if home.getProperty(SERIAL_RELEASED_PROP):
+                home.clearProperty(SERIAL_RELEASED_PROP)
+                xbmc.log("Serial retomada apos o atualizador de firmware", xbmc.LOGINFO)
+
             if not ser:
                 ser = serial.Serial(**config)
                 with serial_lock:

@@ -11,10 +11,10 @@ fi
 
 # Configurações do ESP32
 CHIP="esp32"
-BAUDRATE="57600"
-FLASH_MODE="dio"
-FLASH_FREQ="40m"  # Alterado para 40MHz para maior compatibilidade
-FLASH_SIZE="detect"
+BAUDRATE="115200"
+FLASH_MODE="keep"
+FLASH_FREQ="keep"
+FLASH_SIZE="keep"
 
 # Arquivos de firmware
 BOOT_APP="boot_app0.bin"
@@ -27,10 +27,9 @@ for FILE in $PORTS
 do
     echo "Gravando firmware no ESP32 na porta $FILE..."
 
-    # Apagar a memória flash antes de gravar
-    ./esptool.py --chip $CHIP --port $FILE erase_flash
-    sleep 1  # Pequena pausa antes da gravação
-
+    # Sem erase_flash: grava tudo de uma vez (se falhar, o ESP32 continua
+    # podendo ser gravado) e preserva as configuracoes (NVS).
+    # Prefira o botao "Update ESP32 firmware" do skin, que libera a porta serial.
     # Gravar o firmware
     ./esptool.py --chip $CHIP --port $FILE --baud $BAUDRATE \
         --before default_reset --after hard_reset write_flash -z \

@@ -1062,6 +1062,18 @@
 					<selected>String.IsEqual(Skin.String(NightDimLevel),High)</selected>
 					<visible>!Skin.HasSetting(DisableNightDim)</visible>
 				</control>
+				<control type="button" id="920">
+					<width>$PARAM[panel-width]</width>
+					<height>80</height>
+					<aligny>center</aligny>
+					<font>font24_title</font>
+					<textcolor>white</textcolor>
+					<texturefocus>list_focus.png</texturefocus>
+					<texturenofocus border="40,0,40,5">bara_jos.png</texturenofocus>
+					<pulseonselect>false</pulseonselect>
+					<label>Update ESP32 firmware (latest release)</label>
+					<onclick>RunScript(special://skin/scripts/firmware_update.py)</onclick>
+				</control>
 			</control>
 		<include>Header</include>
 		<include>CommonNowPlaying</include>
